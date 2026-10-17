@@ -1,0 +1,231 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Herdr: closed sessions</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<style>
+body{margin:0;background:#0e0e10}
+.hg{font-family:"SF Pro Text","SF Pro",-apple-system,system-ui,sans-serif;-webkit-font-smoothing:antialiased}
+.mono{font-family:"SF Mono","SFMono-Regular",ui-monospace,monospace}
+:where(.hg) :where(button){font:inherit;color:inherit;background:none;border:0;padding:0;cursor:pointer}
+.scroller{scrollbar-width:none}.scroller::-webkit-scrollbar{display:none}
+.meta{font-size:11px;color:#98989d}
+.kind{display:inline-flex;align-items:center;gap:5px;height:18px;padding:0 7px;border-radius:5px;background:#2c2c2e;color:#c7c7cc;font-size:10.5px;font-weight:500;white-space:nowrap;flex:none}
+.dot{width:8px;height:8px;border-radius:4px;flex:none}
+.d-working{background:#0a84ff}.d-needs{background:#ffcc66}.d-done{background:#7fd48f}.d-idle{background:#636366}.d-failed{background:#ff8078}
+.d-resuming{background:#0a84ff;animation:pulse 1.2s ease-in-out infinite}
+@keyframes pulse{0%,100%{box-shadow:0 0 0 0 rgba(10,132,255,.55)}50%{box-shadow:0 0 0 4px rgba(10,132,255,0)}}
+.scrim{position:absolute;inset:0;z-index:2;background:rgba(8,8,10,.55);backdrop-filter:blur(5px);animation:fade 200ms ease-out both}
+@keyframes fade{from{opacity:0}}
+.sheet{position:absolute;z-index:3;left:50%;top:48px;margin-left:-370px;width:740px;max-height:804px;background:#18181a;border-radius:16px;box-shadow:inset 0 1px 0 rgba(255,255,255,.06),0 20px 48px rgba(0,0,0,.55);padding:22px;box-sizing:border-box;display:flex;flex-direction:column;gap:14px;animation:enter 260ms cubic-bezier(.2,.9,.3,1.15) both}
+@keyframes enter{from{opacity:0;transform:translateY(10px) scale(.98)}}
+.grp{background:#222224;border-radius:8px;padding:6px;display:flex;flex-direction:column;gap:4px}
+.gname{height:28px;display:flex;align-items:center;justify-content:space-between;padding:0 14px;font-size:11px;font-weight:600;color:#7d8aa3}
+.gname .mono{font-weight:400;color:#98989d}
+.rwrap{display:flex;flex-direction:column;border-radius:6px;transition:background-color 100ms}
+.rwrap:hover{background:rgba(48,48,51,.6)}
+.rrow{display:flex;align-items:flex-start;gap:12px;padding:12px 14px;width:100%;box-sizing:border-box;text-align:left}
+.box{width:18px;height:18px;border-radius:5px;flex:none;margin-top:1px;display:flex;align-items:center;justify-content:center;transition:background-color 120ms,transform 200ms cubic-bezier(.34,1.6,.64,1)}
+.box.on{background:#0a84ff;box-shadow:inset 0 1px 0 rgba(255,255,255,.18)}
+.box.off{background:#2c2c2e;box-shadow:inset 0 1px 2px rgba(0,0,0,.45)}
+.rrow:active .box{transform:scale(.85)}
+.how{display:flex;align-items:center;gap:10px;padding:0 14px 12px 44px}
+.opts{display:flex;gap:2px;background:#18181a;border-radius:7px;padding:3px;flex:none}
+.opt{height:28px;padding:0 12px;border-radius:5px;font-size:12px;color:#98989d;transition:background-color 120ms,color 120ms}
+.opt:hover{color:#e5e5e7}
+.opt.on{background:#303033;color:#f5f5f7;box-shadow:inset 0 1px 0 rgba(255,255,255,.06),0 2px 6px rgba(0,0,0,.4)}
+.inp{width:100%;box-sizing:border-box;height:38px;padding:0 14px;background:#222224;border:0;border-radius:6px;color:#f5f5f7;font:inherit;font-size:13px;outline:none;box-shadow:inset 0 0 0 1px rgba(255,255,255,0);transition:box-shadow 120ms}
+.inp:focus{box-shadow:inset 0 0 0 1px rgba(108,180,255,.55)}
+.inp::placeholder{color:#636366}
+.b{display:flex;align-items:center;justify-content:center;gap:8px;height:38px;padding:0 16px;border-radius:7px;font-size:13px;transition:filter 120ms,background-color 120ms,transform 160ms cubic-bezier(.34,1.4,.64,1)}
+.b:active{transform:scale(.97)}
+.b-pri{background:#0a84ff;color:#fff;font-weight:500;box-shadow:inset 0 1px 0 rgba(255,255,255,.18)}
+.b-pri:hover{filter:brightness(1.1)}
+.b-sec{background:#2c2c2e;color:#e5e5e7}
+.b-sec:hover{background:#363639}
+.kc{display:inline-flex;align-items:center;height:18px;padding:0 5px;border-radius:5px;border:1px solid rgba(255,255,255,.14);border-bottom-width:2px;font-size:10.5px;color:#e5e5e7;box-sizing:border-box}
+.kc-on{border-color:rgba(255,255,255,.35);color:#fff}
+.card{display:flex;flex-direction:column;gap:6px;padding:14px 14px 15px;border-radius:6px;animation:cardin 420ms cubic-bezier(.34,1.4,.64,1) both}
+@keyframes cardin{from{opacity:0;transform:translateY(-8px) scale(.97)}}
+.closed{display:flex;align-items:center;gap:10px;height:40px;padding:0 14px;border-radius:8px;background:#222224;font-size:13px;color:#e5e5e7;width:100%;box-sizing:border-box;transition:background-color 120ms}
+.closed:hover{background:#2c2c2e}
+.toastm{position:absolute;right:24px;bottom:24px;z-index:4;display:flex;align-items:center;gap:10px;padding:14px 18px;background:#18181a;border-radius:12px;box-shadow:inset 0 1px 0 rgba(255,255,255,.06),0 20px 48px rgba(0,0,0,.55);font-size:13px;color:#f5f5f7;animation:tin 280ms cubic-bezier(.2,.9,.3,1.2) both}
+@keyframes tin{from{opacity:0;transform:translateY(10px)}}
+</style>
+</helmet>
+<div class="hg" style="position:relative;width:1440px;height:900px;box-sizing:border-box;background:#0e0e10;color:#e5e5e7;display:flex;gap:8px;padding:8px;overflow:hidden">
+
+  <aside style="width:316px;flex:none;background:#18181a;border-radius:12px;box-shadow:inset 0 1px 0 rgba(255,255,255,.06);display:flex;flex-direction:column;padding:18px 14px 14px;box-sizing:border-box;gap:14px">
+    <div style="display:flex;align-items:center;justify-content:space-between;padding:0 6px">
+      <div style="font-size:15px;font-weight:600;color:#f5f5f7">Agents</div>
+      <div class="mono meta">{{sideMeta}}</div>
+    </div>
+    <sc-if value="{{sideEmpty}}" hint-placeholder-val="{{true}}">
+      <div style="padding:24px 12px;font-size:13px;color:#98989d;line-height:1.5">{{emptyText}}</div>
+    </sc-if>
+    <div style="display:flex;flex-direction:column;gap:10px">
+      <sc-for list="{{sideGroups}}" as="g" hint-placeholder-count="2">
+        <section class="grp">
+          <div class="gname"><span>{{g.name}}</span><span class="mono">{{g.count}}</span></div>
+          <sc-for list="{{g.items}}" as="s" hint-placeholder-count="2">
+            <div class="card" style="{{s.delay}}">
+              <div style="display:flex;align-items:center;gap:8px">
+                <span class="dot d-resuming"></span>
+                <span style="flex:1;font-size:13px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{s.title}}</span>
+                <span class="mono" style="font-size:11px;color:#6cb4ff">{{s.stText}}</span>
+              </div>
+              <div style="padding-left:18px;display:flex;gap:8px;align-items:center"><span class="kind">{{s.kindLabel}}</span></div>
+            </div>
+          </sc-for>
+        </section>
+      </sc-for>
+    </div>
+    <div style="flex:1"></div>
+    <button class="closed" onClick="{{openMenu}}">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#98989d" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 12a8 8 0 1 0 2.3-5.6M4 4v5h5"></path></svg>
+      <span style="flex:1;text-align:left">Closed sessions</span>
+      <span class="mono meta">{{closedCount}}</span>
+      <span style="display:flex;gap:3px"><span class="kc mono">ctrl</span><span class="kc mono">⇧</span><span class="kc mono">t</span></span>
+    </button>
+  </aside>
+
+  <main style="flex:1;min-width:0;background:#121214;border-radius:12px"></main>
+
+  <sc-if value="{{open}}" hint-placeholder-val="{{true}}">
+    <div class="scrim" onClick="{{close}}"></div>
+    <div class="sheet" role="dialog" aria-label="Closed sessions">
+      <div style="display:flex;flex-direction:column;gap:4px;padding:0 4px">
+        <div style="font-size:17px;font-weight:600;color:#f5f5f7">{{heading}}</div>
+        <div style="font-size:13px;color:#c7c7cc;line-height:1.5">{{sub}}</div>
+      </div>
+      <input class="inp" type="text" aria-label="Search closed sessions" placeholder="Search by title, project or text" value="{{q}}" onChange="{{onQ}}">
+      <div class="scroller" style="flex:1;min-height:0;overflow:auto;display:flex;flex-direction:column;gap:10px">
+        <sc-for list="{{groups}}" as="g" hint-placeholder-count="2">
+          <div class="grp">
+            <div class="gname"><span>{{g.name}}</span><span class="mono">{{g.count}}</span></div>
+            <sc-for list="{{g.items}}" as="r" hint-placeholder-count="3">
+              <div class="rwrap">
+                <button class="rrow" onClick="{{r.toggle}}">
+                  <span class="{{r.box}}"><sc-if value="{{r.on}}" hint-placeholder-val="{{true}}"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m5 12 5 5 9-10"></path></svg></sc-if></span>
+                  <span style="flex:1;min-width:0;display:flex;flex-direction:column;gap:5px">
+                    <span style="display:flex;align-items:center;gap:8px"><span class="{{r.dot}}"></span><span style="font-size:14px;font-weight:500;color:#f5f5f7;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{r.title}}</span><span class="kind">{{r.kindLabel}}</span><span style="flex:1"></span><span class="meta">{{r.when}}</span></span>
+                    <span style="font-size:12px;color:#98989d;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{r.project}} · {{r.was}} · “{{r.last}}”</span>
+                  </span>
+                </button>
+                <sc-if value="{{r.showHow}}" hint-placeholder-val="{{false}}">
+                  <div class="how">
+                    <div class="opts"><button class="{{r.waitCls}}" onClick="{{r.setWait}}">Open and wait for me</button><button class="{{r.keepCls}}" onClick="{{r.setKeep}}">Open and keep working</button></div>
+                    <span style="font-size:12px;color:#98989d;min-width:0;line-height:1.4">{{r.effect}}</span>
+                  </div>
+                </sc-if>
+              </div>
+            </sc-for>
+          </div>
+        </sc-for>
+        <sc-if value="{{empty}}" hint-placeholder-val="{{false}}"><div class="meta" style="font-size:13px;padding:12px 4px">No closed session matches.</div></sc-if>
+      </div>
+      <div style="display:flex;align-items:center;gap:8px;padding:4px 4px 0">
+        <span class="meta" style="font-size:12px">Sessions stay here for 7 days.</span>
+        <div style="flex:1"></div>
+        <button class="b b-sec" onClick="{{close}}">Close</button>
+        <button class="b b-pri" onClick="{{resume}}">{{resumeText}} <span class="kc kc-on mono">↵</span></button>
+      </div>
+    </div>
+  </sc-if>
+
+  <sc-if value="{{toastShow}}" hint-placeholder-val="{{false}}">
+    <div class="toastm" role="status"><span style="width:18px;height:18px;border-radius:9px;background:#7fd48f;display:flex;align-items:center;justify-content:center"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#0e0e10" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m5 12 5 5 9-10"></path></svg></span>{{toastText}}</div>
+  </sc-if>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"context":{"editor":"enum","options":["After a restart","During a normal day"],"default":"After a restart"},"$preview":{"width":1440,"height":900}}'>
+class Component extends DCLogic {
+  constructor(p) {
+    super(p);
+    this.state = { open: true, toast: null, q: '', reopened: [], on: null, how: { a: 'keep', c: 'keep' } };
+  }
+  componentWillUnmount() { clearTimeout(this._t); }
+  renderVals() {
+    const st = this.state;
+    const restart = (this.props.context ?? 'After a restart') === 'After a restart';
+    const ALL = [
+      { id: 'a', boot: 1, project: 'acme-site', title: 'Fix Vercel POST hang', kind: 'agent', model: 'Opus', was: 'was working', dot: 'working', last: 'Running the smoke test now…', task: 'run the smoke test', when: 'restart · 9:12 AM' },
+      { id: 'f', boot: 1, project: 'acme-site', title: 'dev server', kind: 'term', was: 'was running', dot: 'working', last: 'pnpm dev', when: 'restart · 9:12 AM' },
+      { id: 'b', boot: 1, project: 'Canvas', title: 'Release 0.2.6 notes', kind: 'agent', model: 'Opus', was: 'was waiting for you', dot: 'needs', last: 'Approve: git push origin release/0.2.6?', when: 'restart · 9:12 AM' },
+      { id: 'c', boot: 1, project: 'Canvas', title: 'Split view test', kind: 'agent', model: 'Sonnet', was: 'was working', dot: 'working', last: 'Running test 9 of 14', task: 'run the last 5 tests', when: 'restart · 9:12 AM' },
+      { id: 'd', boot: 0, project: 'dotfiles', title: 'Herdr Graphite mockups', kind: 'agent', model: 'Opus', was: 'you closed the tab', dot: 'done', last: 'Published the canvas', when: 'yesterday' },
+      { id: 'g', boot: 0, project: 'Canvas', title: 'Motion review', kind: 'agent', model: 'Opus', was: 'crashed', dot: 'failed', last: 'Reading src/split-view…', when: '2 days ago' },
+      { id: 'e', boot: 0, project: 'Dashboard', title: 'Dashboard auth fix', kind: 'agent', model: 'Opus', was: 'ended', dot: 'idle', last: 'Waiting for your next prompt', when: '5 days ago' }
+    ];
+    const live = ALL.filter((r) => !st.reopened.includes(r.id));
+    const defOn = {}; ALL.forEach((r) => { defOn[r.id] = restart && r.boot === 1; });
+    const on = st.on || defOn;
+    const q = st.q.toLowerCase();
+    const shown = live.filter((r) => !q || (r.title + ' ' + r.project + ' ' + r.last).toLowerCase().includes(q));
+    const kl = (r) => (r.kind === 'agent' ? 'Agent · ' + r.model : 'Terminal');
+    const mk = (r) => {
+      const isOn = !!on[r.id];
+      const h = st.how[r.id] || 'wait';
+      const working = r.kind === 'agent' && r.dot === 'working';
+      return {
+        ...r, on: isOn, kindLabel: kl(r),
+        box: 'box ' + (isOn ? 'on' : 'off'), dot: 'dot d-' + r.dot,
+        toggle: () => this.setState({ on: { ...on, [r.id]: !on[r.id] } }),
+        showHow: isOn && working,
+        waitCls: 'opt' + (h === 'wait' ? ' on' : ''),
+        keepCls: 'opt' + (h === 'keep' ? ' on' : ''),
+        setWait: () => this.setState({ how: { ...this.state.how, [r.id]: 'wait' } }),
+        setKeep: () => this.setState({ how: { ...this.state.how, [r.id]: 'keep' } }),
+        effect: h === 'keep' ? 'Claude goes on and will ' + r.task + '.' : 'The conversation opens. Claude does nothing until you type.'
+      };
+    };
+    const groups = [];
+    const add = (name, list) => { if (list.length) groups.push({ name, count: String(list.length), items: list.map(mk) }); };
+    if (restart) { add('From the restart', shown.filter((r) => r.boot === 1)); add('Earlier', shown.filter((r) => r.boot === 0)); }
+    else add('Last 7 days', shown);
+    const chosen = live.filter((r) => on[r.id]);
+    const n = chosen.length;
+    const reopenedRows = ALL.filter((r) => st.reopened.includes(r.id));
+    const sideGroups = [];
+    reopenedRows.forEach((r, i) => {
+      let g = sideGroups.find((x) => x.name === r.project);
+      if (!g) { g = { name: r.project, items: [] }; sideGroups.push(g); }
+      const keep = r.kind === 'term' || (r.kind === 'agent' && r.dot === 'working' && (st.how[r.id] || 'wait') === 'keep');
+      g.items.push({ title: r.title, kindLabel: kl(r), stText: keep ? 'resuming work' : 'opened', delay: 'animation-delay:' + i * 90 + 'ms' });
+    });
+    sideGroups.forEach((g) => { g.count = String(g.items.length); });
+    return {
+      open: st.open,
+      heading: restart ? 'Pick up where you left off' : 'Closed sessions',
+      sub: restart
+        ? 'The Mac restarted at 9:12 AM. The sessions that were open are selected. Each one opens in its old tab with its full conversation.'
+        : 'Sessions you closed, that crashed or that ended in the last 7 days. Each one opens with its full conversation.',
+      q: st.q, onQ: (e) => this.setState({ q: e.target.value }),
+      groups, empty: groups.length === 0,
+      resumeText: n ? 'Open ' + n + (n === 1 ? ' session' : ' sessions') : 'Open',
+      resume: () => {
+        if (!n) return;
+        const ids = chosen.map((r) => r.id);
+        const off = { ...on }; ids.forEach((id) => { off[id] = false; });
+        this.setState({ open: false, reopened: this.state.reopened.concat(ids), on: off, toast: 'Opened ' + n + (n === 1 ? ' session' : ' sessions') + ' in their old tabs' });
+        clearTimeout(this._t);
+        this._t = setTimeout(() => this.setState({ toast: null }), 2800);
+      },
+      close: () => this.setState({ open: false }),
+      openMenu: () => this.setState({ open: true }),
+      closedCount: String(live.length),
+      sideGroups, sideEmpty: reopenedRows.length === 0,
+      emptyText: restart ? 'Nothing is open yet. Your sessions from before the restart are in Closed sessions below.' : 'No open sessions.',
+      sideMeta: reopenedRows.length ? reopenedRows.length + ' open' : '',
+      toastShow: !!st.toast, toastText: st.toast || ''
+    };
+  }
+}
+</script>
+</body>
+</html>

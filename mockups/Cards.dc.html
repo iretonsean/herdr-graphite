@@ -1,0 +1,219 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Herdr: chat as cards</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<style>
+body{margin:0;background:#0e0e10}
+.hg{font-family:"SF Pro Text","SF Pro",-apple-system,system-ui,sans-serif;-webkit-font-smoothing:antialiased}
+.mono,.term{font-family:"SF Mono","SFMono-Regular",ui-monospace,monospace}
+:where(.hg) :where(button){font:inherit;color:inherit;background:none;border:0;padding:0;cursor:pointer}
+.scroller{scrollbar-width:none}.scroller::-webkit-scrollbar{display:none}
+.lbl{font-size:11px;font-weight:600;color:#7d8aa3}
+.meta{font-size:11px;color:#98989d}
+.colh{display:flex;align-items:baseline;justify-content:space-between;padding:0 4px 10px}
+.colh .t{font-size:15px;font-weight:600;color:#f5f5f7}
+/* before */
+.before{font-size:12.5px;line-height:1.6;color:#98989d}
+/* terminal cards: square, character-cell look */
+.term{font-size:13px;line-height:1.55;color:#e5e5e7}
+.tc{background:#1b1b1e;padding:10px 14px;display:flex;flex-direction:column;gap:4px}
+.tc .h{color:#7d8aa3}
+.tbtn{color:#6cb4ff;text-decoration:underline;text-decoration-color:rgba(108,180,255,.35);text-underline-offset:3px}
+.tbtn:hover{color:#9ccbff}
+.opts{display:flex;gap:2px;background:#18181a;border-radius:7px;padding:3px;flex:none}
+.opt{height:26px;padding:0 10px;border-radius:5px;font-size:12px;color:#98989d;transition:background-color 120ms,color 120ms}
+.opt:hover{color:#e5e5e7}
+.opt.on{background:#303033;color:#f5f5f7;box-shadow:inset 0 1px 0 rgba(255,255,255,.06),0 2px 6px rgba(0,0,0,.4)}
+.qrow{display:flex;gap:10px;padding:6px 10px;text-align:left;width:100%;box-sizing:border-box;transition:background-color 80ms}
+.qrow:hover{background:#26262a}
+.qrow.on{background:#2c2c30;color:#f5f5f7}
+/* graphite cards */
+.gc{background:#222224;border-radius:10px;padding:14px;display:flex;flex-direction:column;gap:10px;animation:in 280ms cubic-bezier(.2,.9,.3,1.15) both}
+@keyframes in{from{opacity:0;transform:translateY(6px)}}
+.chk{display:flex;align-items:center;gap:10px;font-size:13px;color:#e5e5e7}
+.cb{width:16px;height:16px;border-radius:5px;flex:none;display:flex;align-items:center;justify-content:center}
+.cb.on{background:#0a84ff;box-shadow:inset 0 1px 0 rgba(255,255,255,.18)}
+.cb.off{background:#2c2c2e;box-shadow:inset 0 1px 2px rgba(0,0,0,.45)}
+.fchip{display:inline-flex;align-items:center;gap:8px;height:28px;padding:0 10px;border-radius:7px;background:#18181a;font-size:12px}
+.pm{display:flex;gap:2px}
+.pm i{display:block;width:5px;height:10px;border-radius:1.5px}
+.gtab{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:1px;background:#2c2c2e;border-radius:8px;overflow:hidden;font-size:12px}
+.gtab div{background:#1c1c1e;padding:8px 10px;line-height:1.4}
+.why{display:inline-flex;align-items:center;gap:6px;height:26px;padding:0 10px;border-radius:13px;background:#18181a;font-size:12px;color:#c7c7cc;transition:background-color 120ms;align-self:flex-start}
+.why:hover{background:#2c2c2e}
+.rev{display:grid;grid-template-rows:0fr;opacity:0;transition:grid-template-rows 240ms ease-out,opacity 200ms}
+.rev.open{grid-template-rows:1fr;opacity:1}
+.rev>div{overflow:hidden;min-height:0}
+.dot{width:8px;height:8px;border-radius:4px;flex:none}
+.d-working{background:#0a84ff;animation:pulse 1.6s ease-in-out infinite}
+@keyframes pulse{0%,100%{box-shadow:0 0 0 0 rgba(10,132,255,.55)}50%{box-shadow:0 0 0 4px rgba(10,132,255,0)}}
+.ans{display:flex;align-items:center;gap:12px;height:44px;padding:0 14px;border-radius:7px;width:100%;box-sizing:border-box;text-align:left;font-size:13px;background:rgba(48,48,51,0);transition:background-color 80ms,box-shadow 80ms}
+.ans:hover{background:rgba(48,48,51,.6)}
+.ans.on{background:#303033;box-shadow:inset 0 1px 0 rgba(255,255,255,.06),0 2px 8px rgba(0,0,0,.4);color:#f5f5f7}
+.kc{display:inline-flex;align-items:center;justify-content:center;min-width:18px;height:18px;padding:0 5px;border-radius:5px;border:1px solid rgba(255,255,255,.14);border-bottom-width:2px;font-size:10.5px;color:#e5e5e7;box-sizing:border-box}
+.rec{font-size:11px;color:#7fd48f}
+</style>
+</helmet>
+<div class="hg" style="width:1440px;height:900px;box-sizing:border-box;padding:28px 28px 24px;background:#0e0e10;color:#e5e5e7;display:flex;gap:20px;overflow:hidden">
+
+  <section style="width:330px;flex:none;display:flex;flex-direction:column;min-height:0">
+    <div class="colh"><span class="t">Today</span><span class="mono meta">~420 words</span></div>
+    <div class="before mono scroller" style="flex:1;min-height:0;overflow:hidden;background:#121214;border-radius:12px;padding:18px 18px;display:flex;flex-direction:column;gap:10px;-webkit-mask-image:linear-gradient(#000 80%,transparent)">
+      <div>● I'll start by reading the route handler to understand how the POST request is processed, then I'll check the Vercel runtime configuration…</div>
+      <div>● Read(app/api/feedback/route.ts) ⎿ Read 48 lines</div>
+      <div>● Read(next.config.js) ⎿ Read 22 lines</div>
+      <div>● Looking at the handler, I can see that it calls startStream() before awaiting req.json(). On the Edge runtime this matters because the request body is a stream that…</div>
+      <div>● There are two ways to fix this. The first option is to read the body before starting the stream, which is the smallest change. The second option is to switch this route to the Node.js runtime, which would also work but…</div>
+      <div>● Update(app/api/feedback/route.ts) ⎿ Updated with 2 additions and 1 removal</div>
+      <div>● Bash(pnpm test) ⎿ 14 passed…</div>
+      <div>● Bash(pnpm smoke:post --url …) ⎿ 200 in 88 ms…</div>
+      <div>● Great! I've fixed the issue. Here's a summary of what I did: 1. I read the route handler… 2. I identified that… 3. I changed… Let me know if you'd like me to deploy…</div>
+    </div>
+  </section>
+
+  <section style="flex:1;min-width:0;display:flex;flex-direction:column;min-height:0">
+    <div class="colh"><span class="t">Brief, in the terminal pane</span>
+      <div class="opts"><sc-for list="{{levels}}" as="l" hint-placeholder-count="3"><button class="{{l.cls}}" onClick="{{l.pick}}">{{l.label}}</button></sc-for></div>
+    </div>
+    <div class="term scroller" style="flex:1;min-height:0;overflow:auto;background:#121214;border-radius:12px;padding:20px 22px;display:flex;flex-direction:column;gap:12px">
+      <div style="background:#1d1d20;padding:8px 12px;color:#f5f5f7"><span style="color:#6cb4ff">›</span> the POST to /api/feedback hangs on Vercel. fix it</div>
+
+      <div class="tc">
+        <div class="h">PLAN</div>
+        <div><span style="color:#7fd48f">[x]</span> Read the form handler</div>
+        <div><span style="color:#7fd48f">[x]</span> Find why it hangs</div>
+        <div><span style="color:#7fd48f">[x]</span> Fix it</div>
+        <div><span style="color:#7fd48f">[x]</span> Test on the preview site</div>
+      </div>
+
+      <div class="tc">
+        <div style="display:flex;justify-content:space-between"><span class="h">TWO WAYS</span><span style="color:#98989d">picked A</span></div>
+        <div><span style="color:#7fd48f">A</span> Read the message first   <span style="color:#98989d">2 lines · no slowdown</span>  <span style="color:#7fd48f">◂ picked</span></div>
+        <div><span style="color:#98989d">B</span> Use the Node runtime    <span style="color:#98989d">1 line · slower first load</span></div>
+      </div>
+
+      <div class="tc">
+        <div style="display:flex;justify-content:space-between"><span><span style="color:#7fd48f">✓</span> <span style="color:#f5f5f7">Fixed.</span> POST now answers in 88 ms.</span><button class="tbtn" onClick="{{toggleSteps}}">{{stepsLabel}}</button></div>
+        <div><span style="color:#98989d">route.ts</span> <span style="color:#7fd48f">+2</span> <span style="color:#ff8078">−1</span>   <span style="color:#98989d">tests</span> <span style="color:#7fd48f">14/14</span>   <span style="color:#98989d">preview</span> <span style="color:#7fd48f">200</span></div>
+        <sc-if value="{{showSteps}}" hint-placeholder-val="{{false}}">
+          <div style="color:#98989d;padding-top:4px">Read route.ts · Read next.config.js · Update route.ts · pnpm test · pnpm smoke:post</div>
+        </sc-if>
+        <div style="padding-top:2px"><button class="tbtn" onClick="{{toggleWhy}}">{{whyLabel}}</button>   <span style="color:#636366">screenshot ▸ shown in the Graphite panel</span></div>
+        <sc-if value="{{showWhy}}" hint-placeholder-val="{{false}}">
+          <div style="color:#c7c7cc;padding-top:4px">The handler started its reply before it read the message. On Vercel the message was then never read, so the request waited forever.</div>
+        </sc-if>
+      </div>
+
+      <sc-if value="{{isNormal}}" hint-placeholder-val="{{false}}">
+        <div style="color:#c7c7cc">I kept the change small and did not touch the other routes. The same pattern is in /api/contact, which I can fix next.</div>
+      </sc-if>
+
+      <div class="tc" style="background:#18181b">
+        <div class="h">DEPLOY THE FIX?</div>
+        <sc-for list="{{tAnswers}}" as="a" hint-placeholder-count="3">
+          <button class="{{a.tcls}}" onClick="{{a.pick}}"><span style="color:#6cb4ff">{{a.n}}</span><span style="flex:1">{{a.label}}</span><span style="color:#7fd48f">{{a.recT}}</span></button>
+        </sc-for>
+        <div style="color:#636366;padding-top:2px">1–3 to pick · tab to write your own</div>
+      </div>
+      <sc-if value="{{picked}}" hint-placeholder-val="{{false}}"><div style="color:#98989d">› {{pickedLabel}}</div></sc-if>
+    </div>
+  </section>
+
+  <section style="width:420px;flex:none;display:flex;flex-direction:column;min-height:0">
+    <div class="colh"><span class="t">Same turn, Graphite panel</span><span class="mono meta">beside the pane</span></div>
+    <div class="scroller" style="flex:1;min-height:0;overflow:auto;background:#18181a;border-radius:16px;box-shadow:inset 0 1px 0 rgba(255,255,255,.06);padding:16px;display:flex;flex-direction:column;gap:10px">
+      <div style="display:flex;align-items:center;gap:8px;padding:0 2px 2px"><span class="dot" style="background:#7fd48f"></span><span style="font-size:14px;font-weight:600;color:#f5f5f7;flex:1">Fix Vercel POST hang</span><span class="meta">4 min</span></div>
+
+      <div class="gc" style="gap:12px">
+        <div style="display:flex;align-items:center;gap:10px">
+          <span style="width:22px;height:22px;border-radius:11px;background:#7fd48f;display:flex;align-items:center;justify-content:center;flex:none"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#0e0e10" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m5 12 5 5 9-10"></path></svg></span>
+          <span style="font-size:15px;font-weight:600;color:#f5f5f7;flex:1">Fixed</span>
+          <span class="mono" style="font-size:12px;color:#7fd48f">88 ms</span>
+        </div>
+        <div style="font-size:13px;color:#c7c7cc">The form answers again on the preview site.</div>
+        <div style="display:flex;gap:6px;flex-wrap:wrap">
+          <span class="fchip"><span class="mono">route.ts</span><span class="pm"><i style="background:#7fd48f"></i><i style="background:#7fd48f"></i><i style="background:#ff8078"></i><i style="background:#2c2c2e"></i><i style="background:#2c2c2e"></i></span></span>
+          <span class="fchip">Tests <span class="mono" style="color:#7fd48f">14/14</span></span>
+          <span class="fchip">Preview <span class="mono" style="color:#7fd48f">200</span></span>
+        </div>
+        <div style="border-radius:8px;background:#121214;padding:14px;display:flex;flex-direction:column;gap:8px" role="img" aria-label="Screenshot of the feedback form after sending">
+          <div style="display:flex;justify-content:space-between"><span class="meta">Screenshot · preview site</span><span class="meta">open</span></div>
+          <div style="background:#f4f4f2;border-radius:6px;padding:14px;display:flex;flex-direction:column;gap:8px">
+            <div style="height:8px;width:40%;background:#1b1b1b;border-radius:2px"></div>
+            <div style="height:26px;background:#e2e2df;border-radius:4px"></div>
+            <div style="height:44px;background:#e2e2df;border-radius:4px"></div>
+            <div style="display:flex;align-items:center;gap:8px"><div style="height:24px;width:80px;background:#1b1b1b;border-radius:4px"></div><span style="font-size:11px;color:#1f7a35">✓ Thanks, message sent</span></div>
+          </div>
+        </div>
+        <button class="why" onClick="{{toggleWhy}}"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="8.5"></circle><path d="M12 11v5M12 8h.01"></path></svg>{{whyChip}}</button>
+        <div class="{{whyRev}}"><div><div style="font-size:13px;line-height:1.55;color:#c7c7cc">The handler started its reply before it read the message. On Vercel the message was then never read, so the request waited forever.</div></div></div>
+      </div>
+
+      <div class="gc">
+        <div style="display:flex;justify-content:space-between"><span class="lbl">Two ways</span><span class="meta">picked A</span></div>
+        <div class="gtab">
+          <div class="meta"></div><div style="color:#f5f5f7;font-weight:500">A · Read first <span class="rec">picked</span></div><div style="color:#c7c7cc">B · Node runtime</div>
+          <div class="meta">Change</div><div class="mono">2 lines</div><div class="mono">1 line</div>
+          <div class="meta">Speed</div><div style="color:#7fd48f">no change</div><div style="color:#ffcc66">slower first load</div>
+        </div>
+      </div>
+
+      <div class="gc">
+        <div style="display:flex;justify-content:space-between"><span class="lbl">Plan</span><span class="mono meta">4 of 4</span></div>
+        <sc-for list="{{plan}}" as="p" hint-placeholder-count="4">
+          <div class="chk"><span class="cb on"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m5 12 5 5 9-10"></path></svg></span>{{p}}</div>
+        </sc-for>
+      </div>
+
+      <div class="gc" style="background:#1c1c1e;box-shadow:inset 0 0 0 1px rgba(108,180,255,.25)">
+        <div style="font-size:14px;font-weight:600;color:#f5f5f7">Deploy the fix?</div>
+        <div style="display:flex;flex-direction:column;gap:2px">
+          <sc-for list="{{gAnswers}}" as="a" hint-placeholder-count="3">
+            <button class="{{a.gcls}}" onClick="{{a.pick}}"><span class="kc mono">{{a.n}}</span><span style="flex:1">{{a.label}}</span><span class="rec">{{a.recT}}</span></button>
+          </sc-for>
+        </div>
+      </div>
+    </div>
+  </section>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1440,"height":900}}'>
+class Component extends DCLogic {
+  constructor(p) { super(p); this.state = { level: 'Brief', why: false, steps: false, ans: null }; }
+  renderVals() {
+    const st = this.state;
+    const full = st.level === 'Full';
+    const showSteps = st.steps || full;
+    const showWhy = st.why || full;
+    const A = [['1', 'Deploy to production', 'recommended'], ['2', 'Keep it on the preview site', ''], ['3', 'Fix /api/contact first', '']];
+    const ans = A.map(([n, label, rec]) => ({
+      n, label, recT: rec,
+      tcls: 'qrow' + (st.ans === n ? ' on' : ''),
+      gcls: 'ans' + (st.ans === n ? ' on' : ''),
+      pick: () => this.setState({ ans: n })
+    }));
+    return {
+      levels: ['Brief', 'Normal', 'Full'].map((label) => ({ label, cls: 'opt' + (st.level === label ? ' on' : ''), pick: () => this.setState({ level: label }) })),
+      isNormal: st.level !== 'Brief',
+      showSteps, stepsLabel: showSteps ? 'hide steps' : '5 steps',
+      toggleSteps: () => this.setState({ steps: !this.state.steps }),
+      showWhy, whyLabel: showWhy ? 'hide why' : 'why it hung',
+      toggleWhy: () => this.setState({ why: !this.state.why }),
+      whyChip: showWhy ? 'Hide why' : 'Why it hung',
+      whyRev: 'rev' + (showWhy ? ' open' : ''),
+      tAnswers: ans, gAnswers: ans,
+      picked: !!st.ans,
+      pickedLabel: st.ans ? A.find((a) => a[0] === st.ans)[1] : '',
+      plan: ['Read the form handler', 'Find why it hangs', 'Fix it', 'Test on the preview site']
+    };
+  }
+}
+</script>
+</body>
+</html>

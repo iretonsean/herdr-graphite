@@ -1,0 +1,191 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Herdr: command bar</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<style>
+body{margin:0;background:#0e0e10}
+a{color:#6cb4ff}a:hover{color:#9ccbff}
+.hg{font-family:"SF Pro Text","SF Pro",-apple-system,system-ui,sans-serif;-webkit-font-smoothing:antialiased}
+.mono{font-family:"SF Mono","SFMono-Regular",ui-monospace,monospace}
+:where(.hg) :where(button){font:inherit;color:inherit;background:none;border:0;padding:0;cursor:pointer}
+.panel{animation:enter 200ms cubic-bezier(.2,.9,.3,1.15) both}
+@keyframes enter{from{opacity:0;transform:translateY(6px) scale(.98)}to{opacity:1;transform:none}}
+.row{display:flex;align-items:center;gap:12px;height:40px;padding:0 14px;border-radius:6px;width:100%;box-sizing:border-box;text-align:left;font-size:14px;color:#e5e5e7;background:rgba(48,48,51,0);transition:background-color 80ms ease-out,box-shadow 80ms ease-out}
+.row:hover{background:rgba(48,48,51,.6)}
+.row.on{background:#303033;color:#f5f5f7;box-shadow:inset 0 1px 0 rgba(255,255,255,.06),0 2px 8px rgba(0,0,0,.4)}
+.row.on .ri{color:#0a84ff}
+.ri{width:15px;height:15px;flex:none;color:#98989d;transition:color 80ms}
+.kc{display:inline-flex;align-items:center;height:18px;padding:0 5px;border-radius:5px;border:1px solid rgba(255,255,255,.14);border-bottom-width:2px;font-size:10.5px;color:#e5e5e7;box-sizing:border-box}
+.dot{width:8px;height:8px;border-radius:4px;flex:none}
+.d-working{background:#0a84ff}.d-needs{background:#ffcc66}.d-done{background:#7fd48f}.d-idle{background:#636366}
+.tgt{display:flex;align-items:center;gap:10px;height:38px;padding:0 12px;border-radius:6px;font-size:13px;width:100%;box-sizing:border-box;text-align:left;transition:background-color 100ms}
+.tgt:hover{background:#2c2c2e}
+.box{width:16px;height:16px;border-radius:5px;flex:none;display:flex;align-items:center;justify-content:center;transition:background-color 120ms,transform 180ms cubic-bezier(.34,1.6,.64,1)}
+.box.on{background:#0a84ff;box-shadow:inset 0 1px 0 rgba(255,255,255,.18)}
+.box.off{background:#2c2c2e;box-shadow:inset 0 1px 2px rgba(0,0,0,.45)}
+.tgt:active .box{transform:scale(.85)}
+.send{display:flex;align-items:center;justify-content:center;gap:8px;height:42px;border-radius:7px;background:#0a84ff;color:#fff;font-size:13px;font-weight:500;box-shadow:inset 0 1px 0 rgba(255,255,255,.18);transition:filter 120ms,transform 160ms cubic-bezier(.34,1.4,.64,1)}
+.send:hover{filter:brightness(1.1)}
+.send:active{transform:scale(.97)}
+.q{flex:1;background:none;border:0;outline:none;color:#f5f5f7;font:inherit;font-size:16px}
+.q::placeholder{color:#636366}
+</style>
+</helmet>
+<div class="hg" style="position:relative;width:1440px;height:900px;background:#0e0e10;color:#e5e5e7;overflow:hidden">
+
+  <div aria-hidden="true" style="position:absolute;inset:0;padding:8px;display:flex;gap:8px;box-sizing:border-box">
+    <div style="width:56px;background:#18181a;border-radius:12px;display:flex;flex-direction:column;align-items:center;padding:14px 0;gap:10px">
+      <div style="width:36px;height:36px;border-radius:8px;background:#303033;display:flex;align-items:center;justify-content:center"><span class="dot d-working"></span></div>
+      <div style="width:36px;height:36px;border-radius:8px;display:flex;align-items:center;justify-content:center"><span class="dot d-working"></span></div>
+      <div style="width:36px;height:36px;border-radius:8px;display:flex;align-items:center;justify-content:center"><span class="dot d-needs"></span></div>
+      <div style="width:36px;height:36px;border-radius:8px;display:flex;align-items:center;justify-content:center"><span class="dot d-done"></span></div>
+      <div style="width:36px;height:36px;border-radius:8px;display:flex;align-items:center;justify-content:center"><span class="dot d-idle"></span></div>
+    </div>
+    <div style="flex:1;display:flex;flex-direction:column;gap:8px">
+      <div style="height:42px;background:#18181a;border-radius:12px"></div>
+      <div class="mono" style="flex:1;background:#121214;border-radius:12px;padding:28px 32px;font-size:13.5px;line-height:1.6;color:#98989d">
+        <div><span style="color:#7fd48f">●</span> Read(app/api/feedback/route.ts)</div>
+        <div><span style="color:#7fd48f">●</span> The handler awaits req.json() after it starts the stream…</div>
+        <div><span style="color:#0a84ff">●</span> Bash(pnpm smoke:post --url $PREVIEW_URL)</div>
+      </div>
+    </div>
+  </div>
+  <div aria-hidden="true" style="position:absolute;inset:0;background:rgba(8,8,10,.55);backdrop-filter:blur(6px)"></div>
+
+  <div class="panel" role="dialog" aria-label="Command bar" style="position:absolute;left:50%;top:120px;margin-left:-440px;width:880px;height:560px;background:#18181a;border-radius:16px;box-shadow:inset 0 1px 0 rgba(255,255,255,.06),0 20px 48px rgba(0,0,0,.55);display:flex;flex-direction:column;overflow:hidden">
+    <label style="display:flex;align-items:center;gap:12px;height:60px;padding:0 22px;flex:none;box-shadow:0 1px 0 rgba(255,255,255,.04)">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#98989d" stroke-width="1.7" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="6.5"></circle><path d="m16 16 4 4"></path></svg>
+      <span style="position:absolute;width:1px;height:1px;overflow:hidden">Search sessions, prompts and actions</span>
+      <input class="q" type="text" placeholder="Search sessions, prompts and actions" value="{{q}}" onChange="{{onQ}}">
+      <span class="mono" style="font-size:11px;color:#98989d">{{countText}}</span>
+    </label>
+
+    <div style="flex:1;min-height:0;display:flex">
+      <div style="width:440px;flex:none;overflow:auto;padding:12px;box-sizing:border-box;display:flex;flex-direction:column;gap:14px">
+        <sc-for list="{{sections}}" as="sec" hint-placeholder-count="3">
+          <section style="display:flex;flex-direction:column;gap:2px">
+            <div style="height:28px;display:flex;align-items:center;justify-content:space-between;padding:0 14px">
+              <span style="font-size:11px;font-weight:600;color:#7d8aa3">{{sec.name}}</span>
+              <span class="mono" style="font-size:11px;color:#98989d">{{sec.count}}</span>
+            </div>
+            <sc-for list="{{sec.items}}" as="it" hint-placeholder-count="3">
+              <button class="{{it.cls}}" onClick="{{it.pick}}">
+                <sc-if value="{{it.isSession}}" hint-placeholder-val="{{false}}"><span style="width:15px;display:flex;justify-content:center"><span class="{{it.dot}}"></span></span></sc-if>
+                <sc-if value="{{it.isPrompt}}" hint-placeholder-val="{{false}}"><svg class="ri" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round" aria-hidden="true"><path d="M5 5h14v10H9l-4 4z"></path></svg></sc-if>
+                <sc-if value="{{it.isAction}}" hint-placeholder-val="{{true}}"><svg class="ri" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m13 4-8 10h6l-1 6 8-10h-6z"></path></svg></sc-if>
+                <span style="flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{it.label}}</span>
+                <span class="mono" style="font-size:11px;color:#98989d">{{it.hint}}</span>
+              </button>
+            </sc-for>
+          </section>
+        </sc-for>
+        <sc-if value="{{empty}}" hint-placeholder-val="{{false}}">
+          <div style="padding:24px 10px;font-size:13px;color:#98989d">No match. Press <span class="kc mono">↵</span> to start a new session with this as its first prompt.</div>
+        </sc-if>
+      </div>
+
+      <div style="flex:1;min-width:0;background:#1c1c1e;padding:22px 24px;box-sizing:border-box;display:flex;flex-direction:column;gap:16px">
+        <div style="display:flex;align-items:baseline;justify-content:space-between;gap:12px">
+          <div style="font-size:15px;font-weight:600;color:#f5f5f7">{{cur.label}}</div>
+          <div class="mono" style="font-size:11px;color:#98989d">{{cur.kind}}</div>
+        </div>
+        <div style="font-size:13px;line-height:1.55;color:#e5e5e7;white-space:pre-line">{{cur.body}}</div>
+
+        <sc-if value="{{cur.isPrompt}}" hint-placeholder-val="{{true}}">
+          <div style="background:#222224;border-radius:8px;padding:6px;display:flex;flex-direction:column;gap:4px">
+            <div style="height:28px;display:flex;align-items:center;justify-content:space-between;padding:0 14px">
+              <span style="font-size:11px;font-weight:600;color:#7d8aa3">Send to</span>
+              <span class="mono" style="font-size:11px;color:#98989d">{{selCount}}</span>
+            </div>
+            <sc-for list="{{targets}}" as="t" hint-placeholder-count="4">
+              <button class="tgt" onClick="{{t.toggle}}">
+                <span class="{{t.box}}"><sc-if value="{{t.on}}" hint-placeholder-val="{{true}}"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m5 12 5 5 9-10"></path></svg></sc-if></span>
+                <span class="{{t.dot}}"></span>
+                <span style="flex:1;color:#e5e5e7">{{t.title}}</span>
+                <span class="mono" style="font-size:11px;color:#98989d">{{t.project}}</span>
+              </button>
+            </sc-for>
+          </div>
+          <button class="send">Send to {{selCount}}<span class="kc mono" style="border-color:rgba(255,255,255,.35);color:#fff">ctrl ↵</span></button>
+        </sc-if>
+      </div>
+    </div>
+
+    <div style="height:44px;flex:none;display:flex;align-items:center;gap:18px;padding:0 22px;font-size:12px;color:#98989d;box-shadow:0 -1px 0 rgba(255,255,255,.04)">
+      <span style="display:flex;align-items:center;gap:6px"><span class="kc mono">↵</span>open</span>
+      <span style="display:flex;align-items:center;gap:6px"><span class="kc mono">ctrl ↵</span>send to selected</span>
+      <span style="display:flex;align-items:center;gap:6px"><span class="kc mono">tab</span>more actions</span>
+      <div style="flex:1"></div>
+      <span style="display:flex;align-items:center;gap:6px"><span class="kc mono">esc</span>close</span>
+    </div>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1440,"height":900}}'>
+class Component extends DCLogic {
+  constructor(p) { super(p); this.state = { q: '', active: 'p1', tg: { s1: true, s3: true, s4: false, s5: false } }; }
+  renderVals() {
+    const sessions = [
+      { id: 's1', label: 'Fix Vercel POST hang', hint: 'working · 12m', st: 'working', project: 'acme-site' },
+      { id: 's3', label: 'Release 0.2.6 notes', hint: 'needs you', st: 'needs', project: 'Canvas' },
+      { id: 's4', label: 'Split view test', hint: 'done', st: 'done', project: 'Canvas' },
+      { id: 's5', label: 'Dashboard auth fix', hint: 'ready · 2h', st: 'idle', project: 'Dashboard' }
+    ];
+    const prompts = [
+      { id: 'p1', label: 'Write a handoff', hint: 'saved', body: 'Write a handoff for this session in docs/HANDOFF.md: what is done, what is next, open questions. Keep it short.' },
+      { id: 'p2', label: 'Review the current diff', hint: 'saved', body: 'Review the current diff. Report only bugs you can show with a failing input.' },
+      { id: 'p3', label: 'Smoke-test after deploy', hint: 'saved', body: 'After the Vercel deploy finishes, POST to each API route on the preview URL and report status and time.' }
+    ];
+    const actions = [
+      { id: 'a1', label: 'New session in project…', hint: 'ctrl n', body: 'Pick a project. herdr opens a tab in its folder and starts Claude Code with your saved flags.' },
+      { id: 'a2', label: 'Reopen closed sessions…', hint: 'ctrl ⇧ t', body: 'Sessions you closed, that crashed, that ended or that a restart closed, from the last 7 days. Pick one or more; each opens in its old tab with its full conversation.' },
+      { id: 'a3', label: 'Split right', hint: 'alt ↵', body: 'Split the focused pane to the right in the same folder.' },
+      { id: 'a4', label: 'Rename session', hint: 'ctrl r', body: 'Give the focused session a title. The sidebar card and the window title use it.' }
+    ];
+    const q = this.state.q.toLowerCase();
+    const m = (x) => !q || x.label.toLowerCase().includes(q);
+    const mk = (x, kind) => ({
+      ...x,
+      cls: 'row' + (x.id === this.state.active ? ' on' : ''),
+      isSession: kind === 'session', isPrompt: kind === 'prompt', isAction: kind === 'action',
+      dot: 'dot d-' + (x.st || 'idle'),
+      pick: () => this.setState({ active: x.id })
+    });
+    const sec = [
+      { name: 'Sessions', items: sessions.filter(m).map((x) => mk(x, 'session')) },
+      { name: 'Saved prompts', items: prompts.filter(m).map((x) => mk(x, 'prompt')) },
+      { name: 'Actions', items: actions.filter(m).map((x) => mk(x, 'action')) }
+    ].filter((s) => s.items.length);
+    sec.forEach((s) => { s.count = String(s.items.length); });
+    const all = sessions.map((x) => ({ ...x, kind: 'session', body: x.project + ' · ' + x.hint + '\n\nEnter jumps to this session. Tab shows: rename, move to tab, stop, copy last reply.' }))
+      .concat(prompts.map((x) => ({ ...x, kind: 'prompt' })), actions.map((x) => ({ ...x, kind: 'action' })));
+    const c = all.find((x) => x.id === this.state.active) || all[0];
+    const tg = this.state.tg;
+    const targets = sessions.map((s) => ({
+      title: s.label, project: s.project, on: !!tg[s.id],
+      box: 'box ' + (tg[s.id] ? 'on' : 'off'), dot: 'dot d-' + s.st,
+      toggle: () => this.setState({ tg: { ...tg, [s.id]: !tg[s.id] } })
+    }));
+    const n = targets.filter((t) => t.on).length;
+    const total = sec.reduce((a, s) => a + s.items.length, 0);
+    return {
+      q: this.state.q,
+      onQ: (e) => this.setState({ q: e.target.value }),
+      sections: sec,
+      empty: total === 0,
+      countText: total + ' results',
+      cur: { label: c.label, kind: c.kind, body: c.body, isPrompt: c.kind === 'prompt' },
+      targets,
+      selCount: n + (n === 1 ? ' session' : ' sessions')
+    };
+  }
+}
+</script>
+</body>
+</html>

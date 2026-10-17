@@ -1,0 +1,275 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Herdr: agents and projects</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<style>
+body{margin:0;background:#0e0e10}
+.hg{font-family:"SF Pro Text","SF Pro",-apple-system,system-ui,sans-serif;-webkit-font-smoothing:antialiased}
+.mono{font-family:"SF Mono","SFMono-Regular",ui-monospace,monospace}
+:where(.hg) :where(button){font:inherit;color:inherit;background:none;border:0;padding:0;cursor:pointer}
+.scroller{scrollbar-width:none}.scroller::-webkit-scrollbar{display:none}
+.meta{font-size:11px;color:#98989d}
+.lbl{font-size:11px;font-weight:600;color:#7d8aa3}
+.nav{display:flex;align-items:center;gap:12px;height:40px;padding:0 14px;border-radius:8px;font-size:14px;color:#c7c7cc;width:100%;box-sizing:border-box;text-align:left;transition:background-color 120ms,color 120ms}
+.nav:hover{background:rgba(48,48,51,.5);color:#f5f5f7}
+.nav.on{background:#2a2a2d;color:#f5f5f7;box-shadow:inset 0 1px 0 rgba(255,255,255,.05)}
+.grp{background:#222224;border-radius:8px;padding:6px;display:flex;flex-direction:column;gap:4px}
+.gname{height:28px;display:flex;align-items:center;justify-content:space-between;padding:0 14px;font-size:11px;font-weight:600;color:#7d8aa3}
+.gname .mono{font-weight:400;color:#98989d}
+.role{display:flex;flex-direction:column;gap:12px;padding:16px;border-radius:12px;background:#1a1a1d;text-align:left;box-shadow:inset 0 1px 0 rgba(255,255,255,.05);transition:background-color 120ms,box-shadow 150ms,transform 200ms cubic-bezier(.34,1.4,.64,1)}
+.role:hover{background:#202023;transform:translateY(-1px)}
+.role.on{background:#242427;box-shadow:inset 0 0 0 1.5px rgba(108,180,255,.5),0 8px 20px rgba(0,0,0,.3)}
+.model{display:inline-flex;align-items:center;gap:6px;height:22px;padding:0 9px;border-radius:11px;font-size:11.5px;font-weight:500;white-space:nowrap;flex:none}
+.m-opus{background:#2c2c2e;color:#f5f5f7}
+.m-sonnet{background:#2c2c2e;color:#c7c7cc}
+.m-haiku{background:#2c2c2e;color:#98989d}
+.sub{display:flex;align-items:center;gap:8px;font-size:12.5px;color:#c7c7cc}
+.opts{display:flex;gap:2px;background:#18181a;border-radius:7px;padding:3px;flex:none}
+.opt{height:26px;padding:0 10px;border-radius:5px;font-size:12px;color:#98989d;transition:background-color 120ms,color 120ms}
+.opt:hover{color:#e5e5e7}
+.opt.on{background:#303033;color:#f5f5f7;box-shadow:inset 0 1px 0 rgba(255,255,255,.06),0 2px 6px rgba(0,0,0,.4)}
+.orow{display:flex;align-items:center;gap:12px;min-height:44px;padding:6px 14px;border-radius:6px;font-size:13.5px;color:#e5e5e7;width:100%;box-sizing:border-box;text-align:left;transition:background-color 80ms}
+button.orow:hover{background:rgba(48,48,51,.6)}
+.trk{position:relative;width:36px;height:18px;border-radius:5px;flex:none;transition:background-color 120ms}
+.trk.off{background:#2c2c2e;box-shadow:inset 0 1px 2px rgba(0,0,0,.45)}
+.trk.on{background:#0a84ff;box-shadow:inset 0 1px 0 rgba(255,255,255,.18)}
+.trk.lock{background:#0a84ff;opacity:.5}
+.knob{position:absolute;top:2px;left:2px;width:16px;height:14px;border-radius:3px;background:#c7c7cc;box-shadow:0 1px 2px rgba(0,0,0,.4);transition:transform 180ms cubic-bezier(.34,1.5,.64,1),background-color 120ms}
+.trk.on .knob,.trk.lock .knob{transform:translateX(16px);background:#fff}
+.addb{display:flex;align-items:center;gap:8px;height:36px;padding:0 14px;border-radius:6px;font-size:13px;color:#6cb4ff;transition:background-color 120ms}
+.addb:hover{background:rgba(10,132,255,.08)}
+.pick{display:inline-flex;align-items:center;gap:8px;height:30px;padding:0 10px 0 12px;border-radius:7px;background:#18181a;font-size:12.5px;color:#e5e5e7;transition:background-color 120ms}
+.pick:hover{background:#26262a}
+.menu{display:flex;flex-direction:column;gap:2px;padding:4px;border-radius:8px;background:#18181a;margin:0 14px 6px}
+.mopt{display:flex;align-items:center;gap:10px;height:34px;padding:0 10px;border-radius:6px;font-size:13px;color:#e5e5e7;text-align:left;transition:background-color 80ms}
+.mopt:hover{background:#26262a}
+.mopt.on{background:#303033}
+.prj{display:flex;align-items:center;gap:10px;height:40px;padding:0 14px;border-radius:8px;width:100%;box-sizing:border-box;font-size:13.5px;color:#c7c7cc;text-align:left;transition:background-color 120ms}
+.prj:hover{background:rgba(48,48,51,.5)}
+.prj.on{background:#2a2a2d;color:#f5f5f7}
+.box{width:18px;height:18px;border-radius:5px;flex:none;display:flex;align-items:center;justify-content:center;transition:background-color 120ms,transform 200ms cubic-bezier(.34,1.6,.64,1)}
+.box.on{background:#0a84ff;box-shadow:inset 0 1px 0 rgba(255,255,255,.18)}
+.box.off{background:#2c2c2e;box-shadow:inset 0 1px 2px rgba(0,0,0,.45)}
+.tag{display:inline-flex;align-items:center;height:16px;padding:0 6px;border-radius:4px;background:#2c2c2e;color:#98989d;font-size:10px}
+.fade{animation:in 260ms cubic-bezier(.2,.9,.3,1.1) both}
+@keyframes in{from{opacity:0;transform:translateY(6px)}}
+.dot{width:8px;height:8px;border-radius:4px;flex:none}
+</style>
+</helmet>
+<div class="hg" style="width:1440px;height:900px;box-sizing:border-box;background:#0e0e10;color:#e5e5e7;display:flex;overflow:hidden">
+
+  <aside style="width:240px;flex:none;padding:24px 12px;box-sizing:border-box;display:flex;flex-direction:column;gap:4px">
+    <div style="font-size:17px;font-weight:600;color:#f5f5f7;padding:0 14px 14px">Agents and projects</div>
+    <sc-for list="{{tabs}}" as="t" hint-placeholder-count="3">
+      <button class="{{t.cls}}" onClick="{{t.pick}}"><span style="flex:1">{{t.label}}</span><span class="mono meta">{{t.count}}</span></button>
+    </sc-for>
+    <div style="flex:1"></div>
+    <div style="padding:0 14px;font-size:12px;line-height:1.5;color:#98989d">Roles turn into Claude Code settings: a model and thinking level for the session, and agent files for the subagents.</div>
+  </aside>
+
+  <main style="flex:1;min-width:0;margin:8px;background:#141416;border-radius:16px;display:flex;overflow:hidden">
+
+    <sc-if value="{{isRoles}}" hint-placeholder-val="{{true}}">
+      <section class="scroller" style="flex:1;min-width:0;overflow:auto;padding:28px;display:flex;flex-direction:column;gap:18px">
+        <div style="display:flex;align-items:baseline;gap:12px"><span style="font-size:20px;font-weight:600;color:#f5f5f7">Roles</span><span class="meta" style="font-size:13px">Used by every project and machine</span></div>
+        <div style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px">
+          <sc-for list="{{roles}}" as="r" hint-placeholder-count="5">
+            <button class="{{r.cls}}" onClick="{{r.pick}}">
+              <div style="display:flex;align-items:center;gap:10px"><span style="font-size:15px;font-weight:600;color:#f5f5f7;flex:1">{{r.name}}</span><span class="{{r.modelCls}}">{{r.modelText}}</span></div>
+              <div style="font-size:13px;line-height:1.45;color:#98989d">{{r.does}}</div>
+              <div style="display:flex;flex-direction:column;gap:6px">
+                <sc-for list="{{r.subs}}" as="s" hint-placeholder-count="2"><div class="sub"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#636366" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 4v9a3 3 0 0 0 3 3h9"></path></svg><span style="flex:1">{{s.name}}</span><span class="{{s.modelCls}}">{{s.model}}</span></div></sc-for>
+              </div>
+              <div class="meta">{{r.usedBy}}</div>
+            </button>
+          </sc-for>
+          <button class="role" style="align-items:center;justify-content:center;color:#6cb4ff;font-size:14px;min-height:120px;background:transparent;box-shadow:inset 0 0 0 1.5px rgba(255,255,255,.08)">+ New role</button>
+        </div>
+      </section>
+      <aside class="scroller fade" style="width:380px;flex:none;background:#18181a;overflow:auto;padding:24px 20px;box-sizing:border-box;display:flex;flex-direction:column;gap:14px">
+        <div style="display:flex;align-items:center;gap:10px"><span style="font-size:17px;font-weight:600;color:#f5f5f7;flex:1">{{cur.name}}</span><span class="{{cur.modelCls}}">{{cur.modelText}}</span></div>
+        <div class="grp">
+          <div class="orow"><span style="flex:1">Model</span><div class="opts"><sc-for list="{{models}}" as="o" hint-placeholder-count="3"><button class="{{o.cls}}" onClick="{{o.pick}}">{{o.label}}</button></sc-for></div></div>
+          <div class="orow"><span style="flex:1">Thinking</span><div class="opts"><sc-for list="{{efforts}}" as="o" hint-placeholder-count="3"><button class="{{o.cls}}" onClick="{{o.pick}}">{{o.label}}</button></sc-for></div></div>
+        </div>
+        <div class="grp">
+          <div class="gname"><span>Can do without asking</span></div>
+          <sc-for list="{{perms}}" as="p" hint-placeholder-count="3">
+            <button class="orow" onClick="{{p.toggle}}"><span style="flex:1">{{p.label}}<span style="display:block;font-size:11.5px;color:#98989d;margin-top:2px">{{p.note}}</span></span><span class="{{p.trk}}"><span class="knob"></span></span></button>
+          </sc-for>
+        </div>
+        <div class="grp">
+          <div class="gname"><span>Routine in Claude cloud</span></div>
+          <button class="orow" onClick="{{toggleRt}}"><span style="flex:1">Also run on a schedule<span style="display:block;font-size:11.5px;color:#98989d;margin-top:2px">{{rtNote}}</span></span><span class="{{rtTrk}}"><span class="knob"></span></span></button>
+          <sc-if value="{{rtOn}}" hint-placeholder-val="{{false}}"><div class="orow fade"><span style="flex:1">When</span><span class="pick">Every night · 2:00 AM</span></div><div style="padding:0 14px 10px;font-size:11.5px;line-height:1.5;color:#98989d">You create the routine once on claude.ai. herdr starts it and shows its branch and PR.</div></sc-if>
+        </div>
+        <div class="grp">
+          <div class="gname"><span>Subagents</span><span class="mono">{{subCount}}</span></div>
+          <sc-for list="{{curSubs}}" as="s" hint-placeholder-count="2">
+            <div class="orow" style="flex-direction:column;align-items:stretch;gap:8px;padding:10px 14px">
+              <div style="display:flex;align-items:center;gap:10px"><span style="flex:1;font-weight:500">{{s.name}}</span><span class="{{s.modelCls}}">{{s.model}}</span></div>
+              <div style="font-size:12px;color:#98989d">{{s.does}}</div>
+              <div class="opts" style="align-self:flex-start"><sc-for list="{{s.choices}}" as="o" hint-placeholder-count="3"><button class="{{o.cls}}" onClick="{{o.pick}}">{{o.label}}</button></sc-for></div>
+            </div>
+          </sc-for>
+          <button class="addb">+ Add a subagent</button>
+        </div>
+      </aside>
+    </sc-if>
+
+    <sc-if value="{{isProjects}}" hint-placeholder-val="{{false}}">
+      <section style="width:260px;flex:none;padding:28px 12px;box-sizing:border-box;display:flex;flex-direction:column;gap:4px;box-shadow:1px 0 0 rgba(255,255,255,.04)">
+        <div class="lbl" style="padding:0 14px 8px">Projects</div>
+        <sc-for list="{{projects}}" as="p" hint-placeholder-count="4"><button class="{{p.cls}}" onClick="{{p.pick}}"><span style="flex:1">{{p.name}}</span><span class="mono meta">{{p.machines}}</span></button></sc-for>
+      </section>
+      <section class="scroller fade" style="flex:1;min-width:0;overflow:auto;padding:28px 32px;display:flex;flex-direction:column;gap:16px">
+        <div style="display:flex;align-items:baseline;gap:12px"><span style="font-size:20px;font-weight:600;color:#f5f5f7">{{proj.name}}</span><span class="meta" style="font-size:13px">Who does what in this project</span></div>
+        <div class="grp" style="max-width:820px">
+          <div class="gname"><span>Task type</span><span style="display:flex;gap:150px"><span>Role</span><span>Machine</span></span></div>
+          <sc-for list="{{assign}}" as="a" hint-placeholder-count="5">
+            <div>
+              <div class="orow" style="gap:16px">
+                <span style="flex:1;min-width:0">{{a.task}}<span style="display:block;font-size:11.5px;color:#98989d;margin-top:2px">{{a.note}}</span></span>
+                <button class="pick" style="width:190px;justify-content:space-between" onClick="{{a.toggleRole}}"><span>{{a.role}}</span><span class="{{a.modelCls}}" style="height:18px;font-size:10.5px">{{a.model}}</span></button>
+                <button class="pick" style="width:170px;justify-content:space-between" onClick="{{a.toggleMach}}"><span class="mono">{{a.machine}}</span><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#98989d" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6"></path></svg></button>
+              </div>
+              <sc-if value="{{a.roleMenu}}" hint-placeholder-val="{{false}}"><div class="menu fade"><sc-for list="{{a.roleOpts}}" as="o" hint-placeholder-count="4"><button class="{{o.cls}}" onClick="{{o.pick}}"><span style="flex:1">{{o.label}}</span><span class="{{o.modelCls}}" style="height:18px;font-size:10.5px">{{o.model}}</span></button></sc-for></div></sc-if>
+              <sc-if value="{{a.machMenu}}" hint-placeholder-val="{{false}}"><div class="menu fade"><sc-for list="{{a.machOpts}}" as="o" hint-placeholder-count="3"><button class="{{o.cls}}" onClick="{{o.pick}}"><span class="mono" style="flex:1">{{o.label}}</span><span class="meta">{{o.note}}</span></button></sc-for></div></sc-if>
+            </div>
+          </sc-for>
+          <button class="addb">+ Add a task type</button>
+        </div>
+      </section>
+    </sc-if>
+
+    <sc-if value="{{isMachines}}" hint-placeholder-val="{{false}}">
+      <section class="scroller fade" style="flex:1;min-width:0;overflow:auto;padding:28px 32px;display:flex;flex-direction:column;gap:16px">
+        <div style="display:flex;align-items:baseline;gap:12px"><span style="font-size:20px;font-weight:600;color:#f5f5f7">Machines</span><span class="meta" style="font-size:13px">Pick the projects each machine works on</span></div>
+        <div class="grp" style="max-width:640px"><button class="orow" onClick="{{toggleCloudFirst}}"><span style="flex:1">Send basic tasks to Claude cloud<span style="display:block;font-size:11.5px;color:#98989d;margin-top:2px">Tasks that need no display, monitor, GPU or local files go to the cloud first. Your machines keep the rest.</span></span><span class="{{cloudFirstTrk}}"><span class="knob"></span></span></button></div>
+        <div style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px">
+          <sc-for list="{{machines}}" as="m" hint-placeholder-count="3">
+            <div class="grp" style="padding:8px;gap:6px">
+              <div style="display:flex;flex-direction:column;gap:6px;padding:8px 10px 6px">
+                <div style="display:flex;align-items:center;gap:8px"><span class="{{m.dot}}"></span><span class="mono" style="font-size:14px;font-weight:500;color:#f5f5f7;flex:1">{{m.name}}</span><span class="meta">{{m.status}}</span></div>
+                <div style="display:flex;gap:4px"><sc-for list="{{m.tags}}" as="t" hint-placeholder-count="2"><span class="tag">{{t}}</span></sc-for></div>
+              </div>
+              <sc-for list="{{m.projects}}" as="p" hint-placeholder-count="4">
+                <button class="orow" style="min-height:40px" onClick="{{p.toggle}}"><span class="{{p.box}}"><sc-if value="{{p.on}}" hint-placeholder-val="{{true}}"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m5 12 5 5 9-10"></path></svg></sc-if></span><span style="flex:1">{{p.name}}</span><span class="meta">{{p.note}}</span></button>
+              </sc-for>
+            </div>
+          </sc-for>
+        </div>
+      </section>
+    </sc-if>
+  </main>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1440,"height":900}}'>
+class Component extends DCLogic {
+  constructor(p) {
+    super(p);
+    this.state = {
+      tab: 'roles', sel: 'coder', proj: 'oma', menu: null,
+      rt: { reviewer: true }, cloudFirst: true,
+      cfg: {
+        lead: { model: 'Opus 5.5', effort: 'Medium', perms: { push: true, merge: true } },
+        coder: { model: 'Sonnet 5.5', effort: 'High', perms: { push: true, merge: false } },
+        reviewer: { model: 'Opus 5.5', effort: 'Medium', perms: { push: false, merge: false } },
+        tester: { model: 'Sonnet 5.5', effort: 'Medium', perms: { push: false, merge: false } },
+        writer: { model: 'Sonnet 5.5', effort: 'Low', perms: { push: true, merge: false } }
+      },
+      subs: {},
+      asg: {
+        oma: { code: ['coder', 'auto'], review: ['reviewer', 'workstation'], visual: ['tester', 'buildbox'], release: ['lead', 'workstation'], notes: ['writer', 'auto'] },
+        site: { code: ['coder', 'auto'], review: ['reviewer', 'auto'], visual: ['tester', 'workstation'], release: ['lead', 'workstation'], notes: ['writer', 'auto'] },
+        cust: { code: ['coder', 'workstation'], review: ['reviewer', 'workstation'], visual: ['tester', 'workstation'], release: ['lead', 'workstation'], notes: ['writer', 'auto'] },
+        dash: { code: ['coder', 'workstation'], review: ['reviewer', 'workstation'], visual: ['tester', 'workstation'], release: ['lead', 'workstation'], notes: ['writer', 'workstation'] }
+      },
+      mp: { 'Claude cloud': { oma: true, site: true, cust: false, dash: true }, workstation: { oma: true, site: true, cust: true, dash: true }, buildbox: { oma: true, cust: true, site: false, dash: false }, laptop: { oma: true, site: false, cust: false, dash: false } }
+    };
+  }
+  renderVals() {
+    const st = this.state;
+    const MC = (m) => 'model ' + (m.startsWith('Opus') ? 'm-opus' : m.startsWith('Haiku') ? 'm-haiku' : 'm-sonnet');
+    const R = [
+      { id: 'lead', name: 'Lead', does: 'Plans a round, briefs the coders, merges green branches.', subs: [['planner', 'Planner', 'Opus 5.5', 'Breaks a goal into tasks'], ['scout', 'Explorer', 'Haiku 5.5', 'Finds files and facts fast']] },
+      { id: 'coder', name: 'Coder', does: 'Writes and fixes code on its own branch.', subs: [['scout2', 'Explorer', 'Haiku 5.5', 'Finds files and facts fast'], ['tests', 'Test runner', 'Haiku 5.5', 'Runs the tests, reports failures']] },
+      { id: 'reviewer', name: 'Reviewer', does: 'One review pass. Reports only bugs it can show.', subs: [['sec', 'Security check', 'Sonnet 5.5', 'Looks for leaks and unsafe input']] },
+      { id: 'tester', name: 'Tester', does: 'Runs the app on real displays and takes screenshots.', subs: [['shots', 'Screenshot checker', 'Haiku 5.5', 'Compares screenshots to the design']] },
+      { id: 'writer', name: 'Writer', does: 'Release notes, handoffs and X drafts in plain words.', subs: [] }
+    ];
+    const TK = [['code', 'Code changes', 'features and fixes'], ['review', 'Reviews', 'one pass per branch'], ['visual', 'Visual tests', 'real displays, screenshots'], ['release', 'Releases', 'merge, tag, check downloads'], ['notes', 'Notes and posts', 'release notes, handoffs, X drafts']];
+    const PJ = [['oma', 'canvas-app'], ['site', 'acme-site'], ['cust', 'dotfiles'], ['dash', 'dashboard']];
+    const MA = [['workstation', ['x86', 'trackpad'], 'this machine', 'd-done'], ['buildbox', ['arm64', 'monitor'], 'online', 'd-done'], ['laptop', ['arm64'], 'offline', 'd-idle'], ['Claude cloud', ['cloud', 'no display', 'GitHub only'], 'always on', 'd-done']];
+    const usedCount = (rid) => PJ.filter(([pid]) => Object.values(st.asg[pid]).some((a) => a[0] === rid)).length;
+    const subModel = (sid, def) => st.subs[sid] || def;
+    const roles = R.map((r) => {
+      const c = st.cfg[r.id];
+      return {
+        ...r, cls: 'role' + (st.sel === r.id ? ' on' : ''),
+        modelText: c.model + ' · ' + c.effort.toLowerCase(), modelCls: MC(c.model),
+        subs: r.subs.map(([sid, name, m]) => ({ name, model: subModel(sid, m), modelCls: MC(subModel(sid, m)) })),
+        usedBy: 'Used in ' + usedCount(r.id) + ' of ' + PJ.length + ' projects' + (st.rt[r.id] ? ' · nightly routine' : ''),
+        pick: () => this.setState({ sel: r.id })
+      };
+    });
+    const r = R.find((x) => x.id === st.sel);
+    const c = st.cfg[r.id];
+    const setCfg = (patch) => this.setState({ cfg: { ...this.state.cfg, [r.id]: { ...this.state.cfg[r.id], ...patch } } });
+    const opt = (list, cur, fn) => list.map((l) => ({ label: l.replace(' 5.5', ''), cls: 'opt' + (cur === l ? ' on' : ''), pick: () => fn(l) }));
+    const PERM = [['push', 'Push its branch', 'to GitHub, never to main'], ['merge', 'Merge to main', 'only when CI is green']];
+    const perms = PERM.map(([k, label, note]) => ({ label, note, trk: 'trk ' + (c.perms[k] ? 'on' : 'off'), toggle: () => setCfg({ perms: { ...c.perms, [k]: !c.perms[k] } }) }))
+      .concat([{ label: 'Delete, overwrite or reinstall', note: 'always asks you · cannot be turned off', trk: 'trk lock', toggle: () => {} }]);
+    const curSubs = r.subs.map(([sid, name, m, does]) => ({ name, does, model: subModel(sid, m), modelCls: MC(subModel(sid, m)), choices: opt(['Opus 5.5', 'Sonnet 5.5', 'Haiku 5.5'], subModel(sid, m), (l) => this.setState({ subs: { ...this.state.subs, [sid]: l } })) }));
+
+    const pj = PJ.find((p) => p[0] === st.proj);
+    const A = st.asg[pj[0]];
+    const machinesFor = (pid) => MA.filter(([mid]) => st.mp[mid][pid]);
+    const assign = TK.map(([tid, task, note]) => {
+      const [rid, mid] = A[tid];
+      const rc = st.cfg[rid];
+      const setA = (patch) => this.setState({ asg: { ...this.state.asg, [pj[0]]: { ...this.state.asg[pj[0]], [tid]: patch } }, menu: null });
+      return {
+        task, note,
+        role: R.find((x) => x.id === rid).name, model: rc.model.replace(' 5.5', ''), modelCls: MC(rc.model),
+        machine: mid === 'auto' ? 'Auto' : mid,
+        roleMenu: st.menu === tid + ':r', machMenu: st.menu === tid + ':m',
+        toggleRole: () => this.setState({ menu: this.state.menu === tid + ':r' ? null : tid + ':r' }),
+        toggleMach: () => this.setState({ menu: this.state.menu === tid + ':m' ? null : tid + ':m' }),
+        roleOpts: R.map((x) => ({ label: x.name, model: st.cfg[x.id].model.replace(' 5.5', ''), modelCls: MC(st.cfg[x.id].model), cls: 'mopt' + (x.id === rid ? ' on' : ''), pick: () => setA([x.id, mid]) })),
+        machOpts: [{ label: 'Auto', note: 'best fit, least busy', cls: 'mopt' + (mid === 'auto' ? ' on' : ''), pick: () => setA([rid, 'auto']) }]
+          .concat(machinesFor(pj[0]).filter(([m]) => !(tid === 'visual' && m === 'Claude cloud')).map(([m, tags, status]) => ({ label: m, note: tags.join(' · ') + ' · ' + status, cls: 'mopt' + (mid === m ? ' on' : ''), pick: () => setA([rid, m]) })))
+      };
+    });
+    const projects = PJ.map(([pid, name]) => ({ name, machines: machinesFor(pid).length + ' machines', cls: 'prj' + (st.proj === pid ? ' on' : ''), pick: () => this.setState({ proj: pid, menu: null }) }));
+    const machines = MA.map(([mid, tags, status, d]) => ({
+      name: mid, tags, status, dot: 'dot ' + d,
+      projects: PJ.map(([pid, name]) => {
+        const on = !!st.mp[mid][pid];
+        return { name, on, box: 'box ' + (on ? 'on' : 'off'), note: on ? (mid === 'Claude cloud' ? 'from GitHub' : '') : 'not here', toggle: () => this.setState({ mp: { ...this.state.mp, [mid]: { ...this.state.mp[mid], [pid]: !on } } }) };
+      })
+    }));
+    const tabs = [['roles', 'Roles', String(R.length)], ['projects', 'Projects', String(PJ.length)], ['machines', 'Machines', String(MA.length)]]
+      .map(([id, label, count]) => ({ label, count, cls: 'nav' + (st.tab === id ? ' on' : ''), pick: () => this.setState({ tab: id, menu: null }) }));
+    return {
+      tabs, isRoles: st.tab === 'roles', isProjects: st.tab === 'projects', isMachines: st.tab === 'machines',
+      roles, cur: { name: r.name, modelText: c.model + ' · ' + c.effort.toLowerCase(), modelCls: MC(c.model) },
+      models: opt(['Opus 5.5', 'Sonnet 5.5', 'Haiku 5.5'], c.model, (l) => setCfg({ model: l })),
+      efforts: opt(['Low', 'Medium', 'High'], c.effort, (l) => setCfg({ effort: l })),
+      perms, curSubs, subCount: String(curSubs.length),
+      rtOn: !!st.rt[r.id], rtTrk: 'trk ' + (st.rt[r.id] ? 'on' : 'off'), toggleRt: () => this.setState({ rt: { ...this.state.rt, [r.id]: !this.state.rt[r.id] } }),
+      rtNote: st.rt[r.id] ? 'Runs as a Claude cloud routine' : 'Run this role as a Claude cloud routine',
+      projects, proj: { name: pj[1] }, assign, machines,
+      cloudFirstTrk: 'trk ' + (st.cloudFirst ? 'on' : 'off'), toggleCloudFirst: () => this.setState({ cloudFirst: !this.state.cloudFirst })
+    };
+  }
+}
+</script>
+</body>
+</html>

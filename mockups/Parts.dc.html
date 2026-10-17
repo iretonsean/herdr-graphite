@@ -1,0 +1,206 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Herdr: parts</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<style>
+body{margin:0;background:#0e0e10}
+a{color:#6cb4ff}a:hover{color:#9ccbff}
+.hg{font-family:"SF Pro Text","SF Pro",-apple-system,system-ui,sans-serif;-webkit-font-smoothing:antialiased}
+.mono{font-family:"SF Mono","SFMono-Regular",ui-monospace,monospace}
+:where(.hg) :where(button){font:inherit;color:inherit;background:none;border:0;padding:0;cursor:pointer}
+.h{font-size:15px;font-weight:600;color:#f5f5f7}
+.meta{font-size:11px;color:#98989d}
+.grp{background:#222224;border-radius:8px;padding:6px;display:flex;flex-direction:column;gap:4px}
+.gn{height:28px;display:flex;align-items:center;justify-content:space-between;padding:0 14px;font-size:11px;font-weight:600;color:#7d8aa3}
+.card{display:flex;flex-direction:column;gap:6px;padding:14px 14px 15px;border-radius:6px;text-align:left;width:100%;box-sizing:border-box;transition:background-color 150ms ease-out}
+.card:hover{background:rgba(48,48,51,.6)}
+.kind{display:inline-flex;align-items:center;gap:5px;height:18px;padding:0 7px;border-radius:5px;background:#2c2c2e;color:#c7c7cc;font-size:10.5px;font-weight:500;white-space:nowrap;flex:none}
+.br{display:none}
+.card:hover .br{display:inline}
+.card.drop{background:rgba(10,132,255,.10);box-shadow:inset 0 0 0 1px rgba(108,180,255,.45)}
+.dot{width:8px;height:8px;border-radius:4px;flex:none}
+.d-working{background:#0a84ff;animation:pulse 1.6s ease-in-out infinite}
+.d-needs{background:#ffcc66;animation:glow 2.4s ease-in-out infinite}
+.d-done{background:#7fd48f}.d-idle{background:#636366}
+@keyframes pulse{0%,100%{box-shadow:0 0 0 0 rgba(10,132,255,.55)}50%{box-shadow:0 0 0 4px rgba(10,132,255,0)}}
+@keyframes glow{0%,100%{box-shadow:0 0 0 0 rgba(255,204,102,0)}50%{box-shadow:0 0 0 5px rgba(255,204,102,.18)}}
+.bar{flex:1;height:4px;border-radius:2px;background:#2c2c2e;overflow:hidden}
+.toast{background:#18181a;border-radius:16px;padding:18px;box-shadow:inset 0 1px 0 rgba(255,255,255,.06),0 20px 48px rgba(0,0,0,.55);display:flex;flex-direction:column;gap:12px;animation:slide 260ms cubic-bezier(.2,.9,.3,1.2) both}
+@keyframes slide{from{opacity:0;transform:translateX(16px)}to{opacity:1;transform:none}}
+.b{display:flex;align-items:center;justify-content:center;gap:6px;height:36px;padding:0 16px;border-radius:7px;font-size:13px;transition:filter 120ms,background-color 120ms,transform 160ms cubic-bezier(.34,1.4,.64,1)}
+.b:active{transform:scale(.96)}
+.b-pri{background:#0a84ff;color:#fff;box-shadow:inset 0 1px 0 rgba(255,255,255,.18)}
+.b-pri:hover{filter:brightness(1.1)}
+.b-sec{background:#2c2c2e;color:#e5e5e7}
+.b-sec:hover{background:#363639}
+.ok-in{animation:pop 320ms cubic-bezier(.34,1.6,.64,1) both}
+@keyframes pop{from{opacity:0;transform:scale(.6)}to{opacity:1;transform:none}}
+.term{background:#121214;border-radius:12px;padding:20px 22px;box-shadow:inset 0 1px 0 rgba(255,255,255,.05);font-size:12.5px;line-height:1.6;display:flex;flex-direction:column;gap:10px}
+.chip{display:inline-flex;align-items:center;gap:6px;height:28px;padding:0 13px;border-radius:14px;background:#222224;font-size:12px;color:#e5e5e7}
+.srow{display:flex;align-items:center;gap:10px;height:36px;padding:0 14px;border-radius:6px;font-size:13px}
+.srow.on{background:#303033;box-shadow:inset 0 1px 0 rgba(255,255,255,.06),0 2px 8px rgba(0,0,0,.4);color:#f5f5f7}
+.kc{display:inline-flex;align-items:center;height:18px;padding:0 5px;border-radius:5px;border:1px solid rgba(255,255,255,.14);border-bottom-width:2px;font-size:10.5px;color:#e5e5e7;box-sizing:border-box}
+</style>
+</helmet>
+<div class="hg" style="width:1440px;height:900px;box-sizing:border-box;padding:48px;background:#0e0e10;color:#e5e5e7;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:40px">
+
+  <div style="display:flex;flex-direction:column;gap:14px">
+    <div style="display:flex;justify-content:space-between;align-items:baseline"><span class="h">Session card</span><span class="mono meta">5 states</span></div>
+    <div class="grp">
+      <div class="gn"><span>States</span><span class="mono" style="font-weight:400;color:#98989d">fed by hooks</span></div>
+      <sc-for list="{{cards}}" as="c" hint-placeholder-count="5">
+        <div class="{{c.cls}}">
+          <div style="display:flex;align-items:center;gap:8px">
+            <span class="{{c.dot}}"></span>
+            <span style="flex:1;font-size:13px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{c.title}}</span>
+            <span class="mono" style="{{c.stStyle}}">{{c.stText}}</span>
+          </div>
+          <div style="padding-left:18px;display:flex;align-items:center;gap:8px"><span class="kind"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 4v4M12 16v4M4 12h4M16 12h4M7 7l2 2M15 15l2 2M17 7l-2 2M9 15l-2 2"></path></svg>Agent · Opus</span><span class="mono" style="font-size:11px;color:#98989d">{{c.project}}<span class="br"> · {{c.branch}}</span> · {{c.time}}</span></div>
+          <div style="padding-left:18px;display:flex;align-items:center;gap:8px">
+            <div class="bar"><div style="{{c.bar}}"></div></div>
+            <span class="mono" style="font-size:11px;color:#98989d">{{c.ctx}}</span>
+          </div>
+          <div style="padding-left:18px;font-size:12px;color:{{c.lastColor}};white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{c.last}}</div>
+        </div>
+      </sc-for>
+    </div>
+  </div>
+
+  <div style="display:flex;flex-direction:column;gap:14px">
+    <div style="display:flex;justify-content:space-between;align-items:baseline"><span class="h">Desktop toasts</span><span class="mono meta">bottom right</span></div>
+
+    <div class="toast">
+      <div style="display:flex;align-items:center;gap:10px">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#ffcc66" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 4 3 20h18z"></path><path d="M12 10v4M12 17h.01"></path></svg>
+        <a href="Command.dc.html" style="flex:1;font-size:14px;font-weight:600;color:#f5f5f7;text-decoration:none">Release 0.2.6 notes needs you</a>
+        <span class="mono meta">now</span>
+      </div>
+      <div style="font-size:13px;color:#98989d">Canvas · Claude wants to run:</div>
+      <div class="mono" style="background:#222224;border-radius:6px;padding:10px 12px;font-size:12px;color:#e5e5e7">git push origin release/0.2.6</div>
+      <sc-if value="{{pending}}" hint-placeholder-val="{{true}}">
+        <div style="display:flex;gap:8px">
+          <button class="b b-pri" onClick="{{approve}}">Approve</button>
+          <button class="b b-sec">Deny</button>
+          <div style="flex:1"></div>
+          <a href="Command.dc.html" class="b b-sec" style="text-decoration:none">Open in command center</a>
+        </div>
+      </sc-if>
+      <sc-if value="{{approved}}" hint-placeholder-val="{{false}}">
+        <div style="display:flex;align-items:center;gap:8px;height:30px">
+          <span class="ok-in" style="width:18px;height:18px;border-radius:9px;background:#7fd48f;display:flex;align-items:center;justify-content:center"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#0e0e10" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m5 12 5 5 9-10"></path></svg></span>
+          <span class="mono" style="font-size:12px;color:#7fd48f">approved · closing</span>
+          <div style="flex:1"></div>
+          <button class="b b-sec" onClick="{{reset}}">Undo</button>
+        </div>
+      </sc-if>
+    </div>
+
+    <div class="toast" style="animation-delay:120ms">
+      <div style="display:flex;align-items:center;gap:10px">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#7fd48f" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="8.5"></circle><path d="m8 12 3 3 5-6"></path></svg>
+        <span style="flex:1;font-size:14px;font-weight:600;color:#f5f5f7">Split view test is done</span>
+        <span class="mono meta">2m</span>
+      </div>
+      <div style="font-size:13px;color:#98989d">All 14 tests pass. Ready for review.</div>
+      <div style="display:flex;gap:8px">
+        <button class="b b-sec">Open session</button>
+        <button class="b b-sec">Send "Review the diff"</button>
+      </div>
+    </div>
+
+    <div style="display:flex;justify-content:space-between;align-items:baseline;margin-top:14px"><span class="h">Slash commands</span><span class="mono meta">/herdr mod</span></div>
+    <div class="term mono">
+      <div><span style="color:#6cb4ff">›</span> /herdr</div>
+      <div style="display:flex;flex-direction:column;gap:2px;font-family:'SF Pro Text',-apple-system,system-ui,sans-serif">
+        <div class="srow on"><span class="mono" style="color:#6cb4ff">/herdr split</span><span style="flex:1;color:#98989d">Open a terminal beside this session</span></div>
+        <div class="srow"><span class="mono" style="color:#e5e5e7">/herdr rename</span><span style="flex:1;color:#98989d">Set the card title</span></div>
+        <div class="srow"><span class="mono" style="color:#e5e5e7">/herdr send</span><span style="flex:1;color:#98989d">Prompt another session</span></div>
+        <div class="srow"><span class="mono" style="color:#e5e5e7">/herdr handoff</span><span style="flex:1;color:#98989d">Write a handoff, start a fresh session</span></div>
+      </div>
+    </div>
+  </div>
+
+  <div style="display:flex;flex-direction:column;gap:14px">
+    <div style="display:flex;justify-content:space-between;align-items:baseline"><span class="h">Status line</span><span class="mono meta">Claude Code</span></div>
+    <div class="term mono">
+      <div style="display:flex;gap:14px;color:#98989d;white-space:nowrap">
+        <span style="color:#e5e5e7">Opus 5.5</span>
+        <span style="display:flex;align-items:center;gap:6px">context used <span style="display:inline-block;width:48px;height:4px;border-radius:2px;background:#2c2c2e;overflow:hidden"><span style="display:block;width:62%;height:100%;background:#0a84ff"></span></span>62 %</span>
+        <span>main <span style="color:#7fd48f">+3</span> <span style="color:#ff8078">−1</span></span>
+        <span style="display:flex;align-items:center;gap:6px">session limit <span style="display:inline-block;width:48px;height:4px;border-radius:2px;background:#2c2c2e;overflow:hidden"><span style="display:block;width:34%;height:100%;background:#0a84ff"></span></span>34 %</span>
+      </div>
+      <div style="display:flex;gap:14px;color:#98989d;white-space:nowrap">
+        <span style="color:#e5e5e7">Opus 5.5</span>
+        <span style="display:flex;align-items:center;gap:6px;color:#ffcc66">context used <span style="display:inline-block;width:48px;height:4px;border-radius:2px;background:#2c2c2e;overflow:hidden"><span style="display:block;width:88%;height:100%;background:#ffcc66"></span></span>88 % · handoff soon</span>
+        
+      </div>
+      <div style="display:flex;gap:14px;color:#98989d;white-space:nowrap">
+        <span style="color:#e5e5e7">Sonnet 5.5</span>
+        <span>context used 9 %</span>
+        <span>feat/split-view</span>
+        <span style="color:#ff8078">CI failed</span>
+      </div>
+    </div>
+
+    <div style="display:flex;justify-content:space-between;align-items:baseline;margin-top:14px"><span class="h">Mod band</span><span class="mono meta">above the prompt</span></div>
+    <div class="term">
+      <div style="display:flex;gap:6px;flex-wrap:wrap">
+        <span class="chip"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#7fd48f" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m5 12 5 5 9-10"></path></svg>Handoff ready</span>
+        <span class="chip"><span class="mono" style="color:#6cb4ff">2</span>queued prompts</span>
+      </div>
+      <div style="display:flex;gap:6px;flex-wrap:wrap">
+        <span class="chip"><span class="dot d-needs" style="animation:none"></span>Release 0.2.6 needs you</span>
+        <span class="chip">Dev server <span class="mono" style="color:#7fd48f">running</span></span>
+      </div>
+      <div class="mono" style="border-radius:8px;background:#1d1d20;box-shadow:inset 0 0 0 1px rgba(108,180,255,.35);padding:13px 16px;font-size:12.5px"><span style="color:#6cb4ff">›</span> <span style="color:#636366">Reply, or / for commands</span></div>
+    </div>
+
+    <div style="display:flex;justify-content:space-between;align-items:baseline;margin-top:14px"><span class="h">Shortcuts</span><span class="mono meta">no prefix needed</span></div>
+    <div class="grp">
+      <div class="srow"><span style="flex:1">Command bar</span><span class="kc mono">ctrl</span><span class="kc mono">space</span></div>
+      <div class="srow"><span style="flex:1">Next session</span><span class="kc mono">alt</span><span class="kc mono">↓</span></div>
+      <div class="srow"><span style="flex:1">Answer the toast</span><span class="kc mono">super</span><span class="kc mono">↵</span></div>
+    </div>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1440,"height":900}}'>
+class Component extends DCLogic {
+  constructor(p) { super(p); this.state = { ok: false }; }
+  renderVals() {
+    const ST = { needs: ['needs you', '#ffcc66'], working: ['working', '#6cb4ff'], done: ['done', '#7fd48f'], idle: ['ready', '#98989d'] };
+    const C = [
+      { st: 'needs', title: 'Release 0.2.6 notes', project: 'Canvas', branch: 'release/0.2.6', time: '31m', ctx: 74, cost: '$3.10', last: 'Approve: git push origin release/0.2.6?' },
+      { st: 'working', title: 'Fix Vercel POST hang', project: 'acme-site', branch: 'main', time: '12m', ctx: 62, cost: '$1.40', last: 'Running the smoke test now…' },
+      { st: 'done', title: 'Split view test', project: 'Canvas', branch: 'feat/split-view', time: '1h 05m', ctx: 88, cost: '$4.85', last: 'All 14 tests pass. Ready for review.' },
+      { st: 'idle', title: 'Dashboard auth fix', project: 'Dashboard', branch: 'staging', time: '2h', ctx: 35, cost: '$0.90', last: 'Waiting for your next prompt' },
+      { st: 'idle', title: 'Dashboard auth fix', project: 'Dashboard', branch: 'staging', time: '2h', ctx: 35, cost: '$0.90', last: 'Drop to attach screenshot.png', drop: true }
+    ];
+    const cards = C.map((c) => ({
+      ...c,
+      cls: 'card' + (c.drop ? ' drop' : ''),
+      dot: 'dot d-' + c.st,
+      stText: c.drop ? 'drop file' : ST[c.st][0],
+      stStyle: 'font-size:11px;color:' + (c.drop ? '#6cb4ff' : ST[c.st][1]),
+      ctx: c.ctx + '% context used',
+      lastColor: c.drop ? '#6cb4ff' : '#98989d',
+      bar: 'height:100%;border-radius:2px;width:' + c.ctx + '%;background:' + (c.ctx >= 80 ? '#ffcc66' : '#0a84ff')
+    }));
+    return {
+      cards,
+      pending: !this.state.ok,
+      approved: this.state.ok,
+      approve: () => this.setState({ ok: true }),
+      reset: () => this.setState({ ok: false })
+    };
+  }
+}
+</script>
+</body>
+</html>

@@ -1,0 +1,443 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Herdr: start on another machine</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<style>
+body{margin:0;background:#0e0e10}
+.hg{font-family:"SF Pro Text","SF Pro",-apple-system,system-ui,sans-serif;-webkit-font-smoothing:antialiased}
+.mono{font-family:"SF Mono","SFMono-Regular",ui-monospace,monospace}
+:where(.hg) :where(button){font:inherit;color:inherit;background:none;border:0;padding:0;cursor:pointer}
+.meta{font-size:11px;color:#98989d}
+.dot{width:8px;height:8px;border-radius:4px;flex:none}
+.d-working{background:#0a84ff;animation:pulse 1.6s ease-in-out infinite}
+.d-done{background:#7fd48f}.d-idle{background:#636366}.d-needs{background:#ffcc66}
+@keyframes pulse{0%,100%{box-shadow:0 0 0 0 rgba(10,132,255,.55)}50%{box-shadow:0 0 0 4px rgba(10,132,255,0)}}
+.kind{display:inline-flex;align-items:center;height:18px;padding:0 7px;border-radius:5px;background:#2c2c2e;color:#c7c7cc;font-size:10.5px;font-weight:500;white-space:nowrap;flex:none}
+.kc{display:inline-flex;align-items:center;justify-content:center;min-width:18px;height:18px;padding:0 5px;border-radius:5px;border:1px solid rgba(255,255,255,.35);border-bottom-width:2px;font-size:10.5px;color:#fff;box-sizing:border-box}
+.grp{background:#222224;border-radius:8px;padding:6px;display:flex;flex-direction:column;gap:4px}
+.gname{height:28px;display:flex;align-items:center;justify-content:space-between;padding:0 14px;font-size:11px;font-weight:600;color:#7d8aa3}
+.gname .mono{font-weight:400;color:#98989d}
+.card{display:flex;flex-direction:column;gap:7px;padding:12px 14px;border-radius:6px}
+.card.new{animation:cardin 480ms cubic-bezier(.34,1.4,.64,1) both;background:#303033;box-shadow:inset 0 1px 0 rgba(255,255,255,.06),0 2px 8px rgba(0,0,0,.4)}
+@keyframes cardin{from{opacity:0;transform:translateY(-8px) scale(.97)}}
+.scrim{position:absolute;inset:0;z-index:2;background:rgba(8,8,10,.5);backdrop-filter:blur(4px)}
+.sheet{position:absolute;z-index:3;left:50%;top:40px;margin-left:-470px;width:940px;background:#18181a;border-radius:16px;box-shadow:inset 0 1px 0 rgba(255,255,255,.06),0 20px 48px rgba(0,0,0,.55);padding:22px;box-sizing:border-box;display:flex;flex-direction:column;gap:14px;animation:enter 240ms cubic-bezier(.2,.9,.3,1.15) both}
+@keyframes enter{from{opacity:0;transform:translateY(8px) scale(.98)}}
+.mrow{display:flex;align-items:center;gap:12px;min-height:56px;padding:8px 14px;border-radius:7px;width:100%;box-sizing:border-box;text-align:left;background:rgba(48,48,51,0);transition:background-color 100ms,box-shadow 100ms}
+.mrow:hover{background:rgba(48,48,51,.6)}
+.mrow.on{background:#303033;box-shadow:inset 0 1px 0 rgba(255,255,255,.06),0 2px 8px rgba(0,0,0,.4)}
+.prow{min-height:52px}
+.fix{display:flex;align-items:center;gap:10px;height:36px;padding:0 12px;border-radius:7px;background:#18181a;font-size:13px;color:#e5e5e7;width:100%;box-sizing:border-box;text-align:left;transition:background-color 100ms,box-shadow 100ms}
+.fix:hover{background:#222224}
+.fix.on{background:#303033;box-shadow:inset 0 1px 0 rgba(255,255,255,.06),0 2px 8px rgba(0,0,0,.4);color:#f5f5f7}
+.b-dis{background:#2c2c2e;color:#636366;cursor:default}
+.opts2{display:inline-flex;gap:2px;background:#18181a;border-radius:7px;padding:3px;flex:none}
+.opt2{height:24px;padding:0 9px;border-radius:5px;font-size:11.5px;font-weight:400;color:#98989d;transition:background-color 120ms,color 120ms}
+.opt2:hover{color:#e5e5e7}
+.opt2.on{background:#303033;color:#f5f5f7;box-shadow:inset 0 1px 0 rgba(255,255,255,.06),0 2px 6px rgba(0,0,0,.4)}
+.task{display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:7px;background:#1c1c1e}
+.box{width:18px;height:18px;border-radius:5px;flex:none;display:flex;align-items:center;justify-content:center;transition:background-color 120ms,transform 200ms cubic-bezier(.34,1.6,.64,1)}
+.box.on{background:#0a84ff;box-shadow:inset 0 1px 0 rgba(255,255,255,.18)}
+.box.off{background:#2c2c2e;box-shadow:inset 0 1px 2px rgba(0,0,0,.45)}
+.mrow:active .box{transform:scale(.85)}
+.rchip{display:inline-flex;align-items:center;height:18px;padding:0 7px;border-radius:5px;background:#2c2c2e;color:#e5e5e7;font-size:10.5px;font-weight:500}
+.mrow-s{min-height:48px;padding:6px 12px}
+.tag{display:inline-flex;align-items:center;height:16px;padding:0 6px;border-radius:4px;background:#2c2c2e;color:#98989d;font-size:10px}
+.lnk{font-size:11px;font-weight:500;color:#6cb4ff}
+.lnk:hover{color:#9ccbff}
+.inp{width:100%;box-sizing:border-box;height:34px;padding:0 12px;background:#18181a;border:0;border-radius:6px;color:#f5f5f7;font:inherit;font-size:12.5px;outline:none}
+.inp::placeholder{color:#636366}
+.pick{display:inline-flex;align-items:center;gap:8px;height:28px;padding:0 10px;border-radius:7px;background:#18181a;font-size:12px;color:#e5e5e7;flex:none;transition:background-color 120ms}
+.pick:hover{background:#26262a}
+.menu{display:flex;flex-direction:column;gap:2px;padding:4px;border-radius:8px;background:#18181a}
+.mopt{display:flex;align-items:center;gap:10px;height:32px;padding:0 10px;border-radius:6px;font-size:12.5px;color:#e5e5e7;text-align:left;transition:background-color 80ms}
+.mopt:hover{background:#26262a}
+.mopt.on{background:#303033;color:#f5f5f7}
+.rrow{display:flex;align-items:center;gap:12px;height:44px;padding:0 12px;border-radius:6px;width:100%;box-sizing:border-box;text-align:left;transition:background-color 100ms}
+.rrow:hover{background:rgba(48,48,51,.6)}
+.pbar{width:120px;flex:none;height:4px;border-radius:2px;background:#2c2c2e;overflow:hidden}
+.rev{display:grid;grid-template-rows:0fr;opacity:0;transition:grid-template-rows 240ms ease-out,opacity 200ms}
+.rev.open{grid-template-rows:1fr;opacity:1}
+.rev>div{overflow:hidden;min-height:0}
+.scroller{scrollbar-width:none}.scroller::-webkit-scrollbar{display:none}
+.mrow.off{opacity:.55;cursor:default}
+.mrow.off:hover{background:none}
+.mi{width:34px;height:34px;border-radius:9px;background:#18181a;display:flex;align-items:center;justify-content:center;flex:none;color:#98989d}
+.mrow.on .mi{color:#0a84ff}
+.chk{width:18px;height:18px;border-radius:5px;flex:none;display:flex;align-items:center;justify-content:center;background:#0a84ff;opacity:0;transform:scale(.5);transition:opacity 120ms,transform 240ms cubic-bezier(.34,1.6,.64,1)}
+.chk.on{opacity:1;transform:none}
+.orow{display:flex;align-items:center;gap:12px;min-height:46px;padding:6px 14px;border-radius:6px;font-size:14px;color:#e5e5e7;width:100%;box-sizing:border-box;text-align:left;transition:background-color 80ms}
+button.orow:hover{background:rgba(48,48,51,.6)}
+.sub{display:block;font-size:12px;color:#98989d;margin-top:2px}
+.sel{height:30px;padding:0 10px 0 12px;border-radius:7px;background:#18181a;font-size:13px;color:#e5e5e7;display:flex;align-items:center;gap:8px}
+.trk{position:relative;width:36px;height:18px;border-radius:5px;flex:none;transition:background-color 120ms}
+.trk.off{background:#2c2c2e;box-shadow:inset 0 1px 2px rgba(0,0,0,.45)}
+.trk.on{background:#0a84ff;box-shadow:inset 0 1px 0 rgba(255,255,255,.18)}
+.knob{position:absolute;top:2px;left:2px;width:16px;height:14px;border-radius:3px;background:#c7c7cc;box-shadow:0 1px 2px rgba(0,0,0,.4);transition:transform 180ms cubic-bezier(.34,1.5,.64,1),background-color 120ms}
+.trk.on .knob{transform:translateX(16px);background:#fff}
+.b{display:flex;align-items:center;justify-content:center;gap:8px;height:38px;padding:0 16px;border-radius:7px;font-size:13px;transition:filter 120ms,background-color 120ms,transform 160ms cubic-bezier(.34,1.4,.64,1)}
+.b:active{transform:scale(.97)}
+.b-pri{background:#0a84ff;color:#fff;font-weight:500;box-shadow:inset 0 1px 0 rgba(255,255,255,.18)}
+.b-pri:hover{filter:brightness(1.1)}
+.b-sec{background:#2c2c2e;color:#e5e5e7}
+.b-sec:hover{background:#363639}
+.mini{height:28px;padding:0 11px;border-radius:7px;background:#2c2c2e;font-size:12px;color:#e5e5e7;transition:background-color 120ms}
+.mini:hover{background:#38383b}
+.step{display:flex;align-items:center;gap:12px;height:40px;padding:0 14px;border-radius:6px;font-size:14px;color:#98989d;transition:color 200ms,background-color 200ms}
+.step.now{color:#f5f5f7;background:#2a2a2d}
+.step.done{color:#e5e5e7}
+.si{width:18px;height:18px;flex:none;display:flex;align-items:center;justify-content:center}
+.ring{width:10px;height:10px;border-radius:5px;box-shadow:inset 0 0 0 1.5px #636366}
+.ok{width:18px;height:18px;border-radius:9px;background:#7fd48f;display:flex;align-items:center;justify-content:center;animation:pop 300ms cubic-bezier(.34,1.6,.64,1) both}
+@keyframes pop{from{opacity:0;transform:scale(.5)}}
+.fade{animation:in 300ms ease-out both}
+@keyframes in{from{opacity:0;transform:translateY(6px)}}
+</style>
+</helmet>
+<div class="hg" style="position:relative;width:1440px;height:900px;box-sizing:border-box;background:#0e0e10;color:#e5e5e7;display:flex;gap:8px;padding:8px;overflow:hidden">
+
+  <aside style="width:296px;flex:none;background:#18181a;border-radius:12px;box-shadow:inset 0 1px 0 rgba(255,255,255,.06);display:flex;flex-direction:column;padding:16px 12px 12px;box-sizing:border-box;gap:10px">
+    <div style="font-size:15px;font-weight:600;color:#f5f5f7;padding:4px 6px 4px">Agents</div>
+    <section class="grp">
+      <div class="gname"><span>workstation</span><span class="mono">2</span></div>
+      <div class="card"><div style="display:flex;align-items:center;gap:8px"><span class="dot d-done"></span><span style="flex:1;font-size:13px;font-weight:500">Fix Vercel POST hang</span></div><div style="padding-left:16px"><span class="kind">Agent · Opus</span></div></div>
+      <div class="card"><div style="display:flex;align-items:center;gap:8px"><span class="dot d-needs"></span><span style="flex:1;font-size:13px;font-weight:500">Release 0.2.6 notes</span></div><div style="padding-left:16px"><span class="kind">Agent · Opus</span></div></div>
+    </section>
+    <section class="grp">
+      <div class="gname"><span>buildbox</span><span class="mono">{{miniMeta}}</span></div>
+      <sc-if value="{{notStarted}}" hint-placeholder-val="{{true}}"><div style="padding:8px 14px 10px;font-size:12px;color:#98989d">Online. herdr is closed.</div></sc-if>
+      <sc-if value="{{started}}" hint-placeholder-val="{{false}}">
+        <div class="card new"><div style="display:flex;align-items:center;gap:8px"><span class="dot d-working"></span><span style="flex:1;font-size:13px;font-weight:500;color:#f5f5f7">{{newTitle}}</span><span class="mono" style="font-size:11px;color:#6cb4ff">working</span></div><div style="padding-left:16px;display:flex;gap:6px"><span class="kind">Agent · {{modelShort}}</span><sc-if value="{{rc}}" hint-placeholder-val="{{true}}"><span class="kind" style="color:#6cb4ff">Remote Control</span></sc-if></div></div>
+      </sc-if>
+    </section>
+    <sc-if value="{{cloudStarted}}" hint-placeholder-val="{{false}}">
+      <section class="grp">
+        <div class="gname"><span>Claude cloud</span><span class="mono">1</span></div>
+        <div class="card new" style="gap:8px">
+          <div style="display:flex;align-items:center;gap:8px"><span class="dot d-working"></span><span style="flex:1;font-size:13px;font-weight:500;color:#f5f5f7">Write the report and file the issues</span></div>
+          <div style="padding-left:16px;display:flex;gap:6px;flex-wrap:wrap"><span class="kind">Writer · Sonnet</span><span class="kind">cloud</span></div>
+          <div style="padding-left:16px;font-size:12px;color:#98989d">From GitHub: branch pushed · no PR yet</div>
+          <div style="padding-left:16px;display:flex;gap:6px"><span class="mini">Open on the web</span><span class="mini">Bring the branch here</span></div>
+        </div>
+      </section>
+    </sc-if>
+    <div style="flex:1"></div>
+    <button class="b b-sec" onClick="{{reopen}}">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"></path></svg>New session
+    </button>
+  </aside>
+  <main style="flex:1;min-width:0;background:#141416;border-radius:12px"></main>
+
+  <sc-if value="{{open}}" hint-placeholder-val="{{true}}">
+    <div class="scrim"></div>
+    <div class="sheet" role="dialog" aria-label="New session">
+
+      <sc-if value="{{choosing}}" hint-placeholder-val="{{true}}">
+        <div style="display:flex;align-items:baseline;gap:10px;padding:0 4px"><span style="font-size:17px;font-weight:600;color:#f5f5f7">New session</span><span class="meta" style="font-size:12px">Pick one machine, or several to split the work</span></div>
+        <div style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px;align-items:start">
+          <div style="display:flex;flex-direction:column;gap:12px">
+            <div class="grp">
+              <div class="gname"><span>Where</span><span style="display:flex;align-items:center;gap:10px"><span class="mono">{{whereMeta}}</span><button class="lnk" onClick="{{selectAll}}">{{selectAllText}}</button></span></div>
+              <sc-if value="{{many}}" hint-placeholder-val="{{false}}">
+                <div style="padding:0 6px 4px"><input class="inp" type="text" aria-label="Find a machine" placeholder="Find a machine, or type gpu, arm64, monitor" value="{{mq}}" onChange="{{onMq}}"></div>
+              </sc-if>
+              <div class="scroller" style="max-height:236px;overflow:auto;display:flex;flex-direction:column;gap:2px">
+                <sc-for list="{{machines}}" as="m" hint-placeholder-count="3">
+                  <button class="{{m.cls}}" onClick="{{m.pick}}">
+                    <span class="{{m.box}}"><sc-if value="{{m.isOn}}" hint-placeholder-val="{{true}}"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m5 12 5 5 9-10"></path></svg></sc-if></span>
+                    <span style="flex:1;min-width:0;display:flex;flex-direction:column;gap:3px">
+                      <span style="display:flex;align-items:center;gap:6px;min-width:0"><span class="mono" style="font-size:13px;font-weight:500;color:#f5f5f7">{{m.name}}</span><sc-for list="{{m.tags}}" as="t" hint-placeholder-count="2"><span class="tag">{{t}}</span></sc-for></span>
+                      <span style="display:flex;align-items:center;gap:6px;font-size:12px;color:#98989d"><span class="{{m.dot}}" style="width:6px;height:6px"></span>{{m.status}}</span>
+                    </span>
+                    <sc-if value="{{m.canWake}}" hint-placeholder-val="{{false}}"><span class="mini">Wake it</span></sc-if>
+                  </button>
+                </sc-for>
+              </div>
+            </div>
+
+            <div class="grp">
+              <div class="gname"><span>{{workTitle}}</span>
+                <sc-if value="{{multi}}" hint-placeholder-val="{{true}}"><span class="opts2"><sc-for list="{{modes}}" as="o" hint-placeholder-count="2"><button class="{{o.cls}}" onClick="{{o.pick}}">{{o.label}}</button></sc-for></span></sc-if>
+              </div>
+              <div class="scroller" style="padding:2px 8px 8px;display:flex;flex-direction:column;gap:8px;max-height:330px;overflow:auto">
+                <span style="box-sizing:border-box;padding:10px 12px;border-radius:6px;background:#18181a;font-size:13px;line-height:1.45;color:#e5e5e7">Test Split view on every display and report what breaks.</span>
+                <sc-if value="{{showSplit}}" hint-placeholder-val="{{true}}">
+                  <sc-for list="{{tasks}}" as="k" hint-placeholder-count="3">
+                    <div class="task fade" style="flex-direction:column;align-items:stretch;gap:8px">
+                      <div style="display:flex;align-items:center;gap:10px">
+                        <span style="flex:1;min-width:0;display:flex;flex-direction:column;gap:4px"><span style="font-size:13px;color:#f5f5f7">{{k.label}}</span><span style="display:flex;align-items:center;gap:6px"><span class="rchip">{{k.role}}</span><span style="font-size:11px;color:#98989d">{{k.why}}</span></span></span>
+                        <button class="pick" onClick="{{k.toggleMenu}}"><span class="mono">{{k.curName}}</span><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#98989d" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6"></path></svg></button>
+                      </div>
+                      <sc-if value="{{k.menuOpen}}" hint-placeholder-val="{{false}}">
+                        <div class="menu fade">
+                          <sc-for list="{{k.options}}" as="o" hint-placeholder-count="3"><button class="{{o.cls}}" onClick="{{o.pick}}"><span class="mono" style="flex:1">{{o.label}}</span><span class="meta">{{o.load}}</span></button></sc-for>
+                        </div>
+                      </sc-if>
+                    </div>
+                  </sc-for>
+                </sc-if>
+                <sc-if value="{{showSame}}" hint-placeholder-val="{{false}}">
+                  <div style="font-size:12px;color:#98989d;padding:0 4px">Each machine gets this same message. Good for comparing results.</div>
+                </sc-if>
+              </div>
+            </div>
+          </div>
+
+          <div style="display:flex;flex-direction:column;gap:12px">
+            <div class="grp">
+              <div class="gname"><span>Project</span><span class="mono">checked on {{checkedOn}}</span></div>
+              <sc-for list="{{projects}}" as="p" hint-placeholder-count="4">
+                <button class="{{p.cls}}" onClick="{{p.pick}}">
+                  <span style="flex:1;min-width:0;display:flex;flex-direction:column;gap:4px">
+                    <span style="font-size:14px;font-weight:500;color:#f5f5f7">{{p.name}}</span>
+                    <span style="display:flex;align-items:center;gap:6px;font-size:12px;color:#98989d;min-width:0"><span class="{{p.dot}}" style="width:6px;height:6px"></span><span style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{p.sync}}</span></span>
+                  </span>
+                  <span class="{{p.chk}}"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m5 12 5 5 9-10"></path></svg></span>
+                </button>
+              </sc-for>
+              <div style="padding:6px 14px 10px;display:flex;flex-direction:column;gap:10px">
+                <sc-if value="{{showConflict}}" hint-placeholder-val="{{false}}">
+                  <div class="fade" style="display:flex;flex-direction:column;gap:10px;padding:12px;border-radius:8px;background:rgba(255,204,102,.07)">
+                    <div style="font-size:13px;line-height:1.45;color:#e5e5e7">Both machines changed <span class="mono">main</span> since the last sync. workstation has 2 new commits. The buildbox has 1 commit and unsaved changes.</div>
+                    <sc-for list="{{fixes}}" as="f" hint-placeholder-count="3">
+                      <button class="{{f.cls}}" onClick="{{f.pick}}"><span style="flex:1">{{f.label}}</span><span style="font-size:11px;color:#6cb4ff">{{f.tag}}</span></button>
+                    </sc-for>
+                  </div>
+                </sc-if>
+                <sc-if value="{{showPlan}}" hint-placeholder-val="{{true}}">
+                  <div style="display:flex;flex-direction:column;gap:6px;font-size:12px;color:#98989d">
+                    <sc-for list="{{syncPlan}}" as="x" hint-placeholder-count="2"><span>· {{x}}</span></sc-for>
+                  </div>
+                </sc-if>
+              </div>
+            </div>
+            <div class="grp">
+              <div class="orow"><span style="flex:1">Agents<span class="sub">{{agentsSub}} · <a href="Agents.dc.html" style="color:#6cb4ff;text-decoration:none">edit roles</a></span></span><span class="sel">From the project <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#98989d" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6"></path></svg></span></div>
+              <button class="orow" onClick="{{toggleRc}}"><span style="flex:1">Remote Control<span class="sub">Send prompts from the Claude app</span></span><span class="{{rcTrack}}"><span class="knob"></span></span></button>
+            </div>
+          </div>
+        </div>
+        <div style="display:flex;align-items:center;gap:8px;padding:2px 4px 0">
+          <span class="meta" style="font-size:12px">{{summary}}</span>
+          <div style="flex:1"></div>
+          <button class="b b-sec" onClick="{{close}}">Cancel</button>
+          <button class="{{startCls}}" onClick="{{start}}">{{startText}} <span class="kc mono">ctrl ↵</span></button>
+        </div>
+      </sc-if>
+
+      <sc-if value="{{running}}" hint-placeholder-val="{{false}}">
+        <div style="display:flex;flex-direction:column;gap:4px;padding:0 4px">
+          <div style="font-size:17px;font-weight:600;color:#f5f5f7">{{runTitle}}</div>
+          <div style="font-size:13px;color:#98989d">You can close this. It goes on in the background.</div>
+        </div>
+        <div class="grp scroller" style="max-height:520px;overflow:auto">
+          <div class="gname"><span>{{runMeta}}</span><span class="mono">{{runCount}}</span></div>
+          <sc-for list="{{runRows}}" as="c" hint-placeholder-count="3">
+            <div>
+              <button class="rrow" onClick="{{c.toggle}}">
+                <span class="{{c.dot}}"></span>
+                <span class="mono" style="width:120px;flex:none;font-size:13px;color:#f5f5f7">{{c.name}}</span>
+                <span style="flex:1;min-width:0;font-size:13px;color:#c7c7cc;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{c.now}}</span>
+                <div class="pbar"><div style="{{c.bar}}"></div></div>
+                <span class="mono meta" style="width:34px;text-align:right">{{c.frac}}</span>
+              </button>
+              <div class="{{c.rev}}"><div>
+                <div style="padding:2px 6px 8px 34px;display:flex;flex-direction:column;gap:2px">
+                  <sc-for list="{{c.steps}}" as="s" hint-placeholder-count="5">
+                    <div class="{{s.cls}}" style="height:32px">
+                      <span class="si">
+                        <sc-if value="{{s.isDone}}" hint-placeholder-val="{{false}}"><span class="ok"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#0e0e10" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m5 12 5 5 9-10"></path></svg></span></sc-if>
+                        <sc-if value="{{s.isNow}}" hint-placeholder-val="{{false}}"><span class="dot d-working"></span></sc-if>
+                        <sc-if value="{{s.isTodo}}" hint-placeholder-val="{{true}}"><span class="ring"></span></sc-if>
+                      </span>
+                      <span style="flex:1;font-size:13px">{{s.label}}</span><span class="meta">{{s.note}}</span>
+                    </div>
+                  </sc-for>
+                </div>
+              </div></div>
+            </div>
+          </sc-for>
+        </div>
+        <sc-if value="{{finished}}" hint-placeholder-val="{{false}}">
+          <div class="fade" style="display:flex;align-items:center;gap:8px;padding:2px 4px 0">
+            <span style="font-size:13px;color:#7fd48f;flex:1">{{doneText}}</span>
+            <button class="b b-sec" onClick="{{close}}">Done</button>
+            <button class="b b-pri" onClick="{{close}}">Watch them here</button>
+          </div>
+        </sc-if>
+        <sc-if value="{{notFinished}}" hint-placeholder-val="{{true}}">
+          <div style="display:flex;justify-content:flex-end;padding:2px 4px 0"><button class="b b-sec" onClick="{{close}}">Close, keep going</button></div>
+        </sc-if>
+      </sc-if>
+    </div>
+  </sc-if>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"machines":{"editor":"enum","options":["My 3 machines","Example: 8 machines"],"default":"My 3 machines"},"$preview":{"width":1440,"height":900}}'>
+class Component extends DCLogic {
+  constructor(p) { super(p); this.state = { open: true, ms: { here: true, mini: true, cloud: true }, rc: true, model: 'Opus 5.5', step: -1, started: false, p: 'oma', fix: null, mode: 'split', asg: {}, menu: null, mq: '', exp: {} }; }
+  componentWillUnmount() { clearInterval(this._i); }
+  renderVals() {
+    const st = this.state;
+    const big = (this.props.machines ?? 'My 3 machines') !== 'My 3 machines';
+    const MINE = [
+      { id: 'here', name: 'workstation', tags: ['x86', 'trackpad'], status: 'this machine · herdr open · 2 sessions', herdr: true, on: true, load: 2 },
+      { id: 'mini', name: 'buildbox', tags: ['arm64', 'monitor'], status: 'online · herdr closed', herdr: false, on: true, load: 0 },
+      { id: 'air', name: 'laptop', tags: ['arm64'], status: 'offline since yesterday', herdr: false, on: false, load: 0 },
+      { id: 'cloud', name: 'Claude cloud', tags: ['cloud', 'no display', 'GitHub only'], status: 'always on · starts from GitHub', herdr: true, on: true, load: 0, cloud: true }
+    ];
+    const MORE = [
+      { id: 'gpu1', name: 'render-01', tags: ['x86', 'gpu'], status: 'online · herdr open · 1 session', herdr: true, on: true, load: 1 },
+      { id: 'gpu2', name: 'render-02', tags: ['x86', 'gpu'], status: 'online · herdr open · idle', herdr: true, on: true, load: 0 },
+      { id: 'ci1', name: 'runner-a', tags: ['x86'], status: 'online · herdr open · 3 sessions', herdr: true, on: true, load: 3 },
+      { id: 'ci2', name: 'runner-b', tags: ['arm64'], status: 'online · herdr closed', herdr: false, on: true, load: 0 },
+      { id: 'lab', name: 'studio-lab', tags: ['x86', 'monitor'], status: 'offline · 3 days', herdr: false, on: false, load: 0 }
+    ];
+    const ALL = big ? MINE.concat(MORE) : MINE;
+    const online = ALL.filter((m) => m.on);
+    const q = st.mq.toLowerCase();
+    const shown = ALL.filter((m) => !q || (m.name + ' ' + m.tags.join(' ')).toLowerCase().includes(q));
+    const sel = ALL.filter((m) => st.ms[m.id] && m.on);
+    const multi = sel.length > 1;
+    const allOn = online.every((m) => st.ms[m.id]);
+    const machines = shown.map((m) => {
+      const on = !!st.ms[m.id];
+      return {
+        ...m, isOn: on, dot: 'dot ' + (m.on ? 'd-done' : 'd-idle'),
+        cls: 'mrow mrow-s' + (on ? ' on' : '') + (m.on ? '' : ' off'),
+        box: 'box ' + (on ? 'on' : 'off'), canWake: !m.on,
+        pick: () => { if (!m.on) return; const ms = { ...this.state.ms, [m.id]: !this.state.ms[m.id] }; if (!ALL.some((x) => ms[x.id] && x.on)) return; this.setState({ ms }); }
+      };
+    });
+    const P = [
+      { id: 'oma', name: 'canvas-app', dot: 'dot d-working', sync: 'behind on 2 machines · will pull', plan: ['Push 2 commits from workstation first', 'Pull on every machine that is behind'], step: ['Sync canvas-app', 'pulled'] },
+      { id: 'site', name: 'acme-site', dot: 'dot d-working', sync: 'missing on buildbox · will clone', plan: ['Clone where it is missing'], step: ['Clone acme-site', 'cloned'] },
+      { id: 'cust', name: 'dotfiles', dot: 'dot d-needs', sync: 'buildbox also changed main · needs you', plan: [], step: ['Sync dotfiles', ''] },
+      { id: 'dash', name: 'dashboard', dot: 'dot d-done', sync: 'Up to date everywhere', plan: ['Nothing to sync'], step: null }
+    ];
+    const pc = P.find((x) => x.id === st.p);
+    const FX = [['a', 'Push mine, then merge there', 'suggested', 'merged'], ['b', 'Work in a new worktree there', '', 'new worktree'], ['c', 'Use buildbox as it is', '', 'as it is']];
+    const isConf = pc.id === 'cust' && !!st.ms.mini;
+    const fx = FX.find((f) => f[0] === st.fix);
+    const projects = P.map((x) => ({ ...x, cls: 'mrow prow' + (x.id === st.p ? ' on' : ''), chk: 'chk' + (x.id === st.p ? ' on' : ''), pick: () => this.setState({ p: x.id, fix: null }) }));
+    const fixes = FX.map(([id, label, tag]) => ({ label, tag, cls: 'fix' + (st.fix === id ? ' on' : ''), pick: () => this.setState({ fix: id }) }));
+    const blocked = isConf && !st.fix;
+
+    const T = [
+      { id: 't1', label: 'Test on the external monitor', why: 'needs a monitor', need: 'monitor', role: 'Tester · Sonnet' },
+      { id: 't2', label: 'Test on the built-in display and trackpad', why: 'needs a trackpad', need: 'trackpad', role: 'Tester · Sonnet' },
+      { id: 't3', label: 'Render the test video at 4K', why: 'fastest on a GPU', need: 'gpu', role: 'Coder · Sonnet' },
+      { id: 't4', label: 'Run the full test suite on arm64', why: 'needs arm64', need: 'arm64', role: 'Coder · Sonnet' },
+      { id: 't5', label: 'Write the report and file the issues', why: 'runs after the others', need: '', role: 'Writer · Sonnet' }
+    ];
+    const autoPick = (k) => {
+      const fit = sel.filter((m) => (!k.need || m.tags.includes(k.need)) && !(m.cloud && k.need));
+      if (!k.need) { const c = sel.find((m) => m.cloud); if (c) return c; }
+      const pool = fit.length ? fit : sel.filter((m) => !m.cloud);
+      return (pool.length ? pool : sel).slice().sort((a, b) => a.load - b.load)[0];
+    };
+    const tasks = T.filter((k) => !k.need || ALL.some((m) => m.tags.includes(k.need))).map((k) => {
+      const auto = autoPick(k);
+      const chosen = sel.find((m) => m.id === st.asg[k.id]);
+      const cur = chosen || auto;
+      return {
+        ...k, curId: cur ? cur.id : null,
+        curName: (cur ? cur.name : '—') + (chosen ? '' : ' · auto'),
+        why: k.why + (chosen ? '' : (cur && cur.cloud ? ' · basic task, sent to the cloud' : ', least busy')),
+        menuOpen: st.menu === k.id,
+        toggleMenu: () => this.setState({ menu: this.state.menu === k.id ? null : k.id }),
+        options: [{ label: 'Auto', load: 'best fit, least busy', cls: 'mopt' + (chosen ? '' : ' on'), pick: () => { const a = { ...this.state.asg }; delete a[k.id]; this.setState({ asg: a, menu: null }); } }]
+          .concat(sel.map((m) => ({ label: m.name, load: (k.need && !m.tags.includes(k.need) ? 'no ' + k.need + ' · ' : '') + m.load + ' running', cls: 'mopt' + (chosen && chosen.id === m.id ? ' on' : ''), pick: () => this.setState({ asg: { ...this.state.asg, [k.id]: m.id }, menu: null }) })))
+      };
+    });
+    const modes = [['split', 'Let Claude split it'], ['same', 'Same task on each']].map(([id, label]) => ({ label, cls: 'opt2' + (st.mode === id ? ' on' : ''), pick: () => this.setState({ mode: id }) }));
+
+    const stepsFor = (m) => {
+      if (m.cloud) {
+        const mineC = multi ? (st.mode === 'split' ? tasks.filter((k) => k.curId === m.id).map((k) => k.label) : ['Same task']) : ['Your message'];
+        return [['Push the branch to GitHub', 'from workstation', true], ['Start a cloud session', pc.name, mineC.length > 0], ['Set the model · ' + st.model, '', mineC.length > 0], ...mineC.map((l) => ['Send: ' + l, '', true])].filter((s) => s[2]);
+      }
+      const mine = multi ? (st.mode === 'split' ? tasks.filter((k) => k.curId === m.id).map((k) => k.label) : ['Same task']) : ['Your message'];
+      return [
+        ['Connect', '', m.id !== 'here'],
+        ['Open herdr', 'it was closed', !m.herdr],
+        ...(pc.step && !m.cloud ? [[pc.step[0], isConf && m.id === 'mini' ? (fx ? fx[3] : '') : pc.step[1], true]] : []),
+        ['Start Claude · ' + (multi && st.mode === 'split' ? tasks.filter((k) => k.curId === m.id).map((k) => k.role.split(' ·')[0]).filter((v, i, a) => a.indexOf(v) === i).join(' + ') : 'Coder'), 'from the project', mine.length > 0],
+        ['Turn on Remote Control', '', st.rc && mine.length > 0],
+        ...mine.map((l) => ['Send: ' + l, '', true])
+      ].filter((s) => s[2]);
+    };
+    const cols = sel.map((m) => ({ m, steps: stepsFor(m) })).filter((c) => !multi || st.mode === 'same' || tasks.some((k) => k.curId === c.m.id));
+    const maxLen = Math.max(1, ...cols.map((c) => c.steps.length));
+    const runRows = cols.map(({ m, steps }) => {
+      const n = steps.length;
+      const k = Math.min(st.step, n);
+      const done = k >= n;
+      const now = done ? 'Running · ' + (steps[n - 1] ? steps[n - 1][0].replace('Send: ', '') : '') : (steps[k] ? steps[k][0] : '');
+      return {
+        name: m.name, now, frac: k + '/' + n,
+        dot: 'dot ' + (done ? 'd-done' : 'd-working'),
+        bar: 'height:100%;border-radius:2px;background:' + (done ? '#7fd48f' : '#0a84ff') + ';width:' + Math.round((k / n) * 100) + '%;transition:width 500ms ease-out',
+        rev: 'rev' + (st.exp[m.id] ? ' open' : ''),
+        toggle: () => this.setState({ exp: { ...this.state.exp, [m.id]: !this.state.exp[m.id] } }),
+        steps: steps.map(([label, note], i) => { const s = i < st.step ? 'done' : i === st.step ? 'now' : 'todo'; return { label, note, cls: 'step ' + s, isDone: s === 'done', isNow: s === 'now', isTodo: s === 'todo' }; })
+      };
+    });
+    const finished = st.step >= maxLen;
+    const start = () => {
+      if (blocked) return;
+      this.setState({ step: 0, menu: null });
+      clearInterval(this._i);
+      let k = 0;
+      this._i = setInterval(() => {
+        k += 1;
+        this.setState({ step: k, started: k >= maxLen ? true : this.state.started });
+        if (k >= maxLen) clearInterval(this._i);
+      }, 800);
+    };
+    const used = cols.length;
+    return {
+      open: st.open,
+      choosing: st.step < 0, running: st.step >= 0,
+      machines, multi, many: ALL.length > 5,
+      mq: st.mq, onMq: (e) => this.setState({ mq: e.target.value }),
+      whereMeta: sel.length + ' picked · ' + online.length + ' of ' + ALL.length + ' online',
+      selectAllText: allOn ? 'Clear' : 'All online',
+      selectAll: () => { const ms = {}; if (allOn) ms.here = true; else online.forEach((m) => { ms[m.id] = true; }); this.setState({ ms }); },
+      workTitle: multi ? 'The work' : 'First message',
+      modes, showSplit: multi && st.mode === 'split', showSame: multi && st.mode === 'same', tasks,
+      checkedOn: sel.length > 2 ? sel.length + ' machines' : sel.map((m) => m.name).join(' + '),
+      projects, fixes, showConflict: isConf, showPlan: !isConf, syncPlan: pc.plan,
+      model: st.model,
+      agentsSub: 'Tester, Coder and Writer from canvas-app',
+      rcTrack: 'trk ' + (st.rc ? 'on' : 'off'),
+      toggleRc: () => this.setState({ rc: !this.state.rc }),
+      summary: blocked ? 'Pick how to sync dotfiles first' : (sel.some((m) => !m.herdr) ? 'Opens herdr first where it is closed' : 'Opens in new tabs'),
+      startCls: 'b ' + (blocked ? 'b-dis' : 'b-pri'),
+      startText: multi ? 'Start on ' + (st.mode === 'split' ? used : sel.length) + ' machines' : 'Start on ' + sel[0].name,
+      start,
+      runRows, runMeta: 'Machines', runCount: (finished ? used : runRows.filter((r) => !r.frac.startsWith(String(maxLen))).length) + ' of ' + used + (finished ? ' running' : ' starting'),
+      finished, notFinished: !finished,
+      runTitle: finished ? 'Started' : 'Starting on ' + (used > 1 ? used + ' machines…' : sel[0].name + '…'),
+      doneText: used > 1 ? 'Running on ' + used + ' machines. Their cards are in the sidebar.' : 'Running on ' + sel[0].name + '. Its card is in the sidebar.',
+      close: () => this.setState({ open: false }),
+      reopen: () => { clearInterval(this._i); this.setState({ open: true, step: -1 }); },
+      started: st.started && !!st.ms.mini,
+      cloudStarted: st.started && !!st.ms.cloud,
+      miniMeta: st.started && st.ms.mini ? '1 · herdr open' : '0',
+      notStarted: !(st.started && st.ms.mini),
+      newTitle: multi && st.mode === 'split' ? 'Test on the external monitor' : 'Test split view on every display',
+      modelShort: st.model.split(' ')[0],
+      rc: st.rc
+    };
+  }
+}
+</script>
+</body>
+</html>

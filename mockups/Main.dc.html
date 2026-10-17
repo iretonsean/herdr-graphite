@@ -1,0 +1,616 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Herdr: attached sidebar</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist+Mono:wght@400;500&amp;family=JetBrains+Mono:wght@400;500&amp;display=swap">
+<style>
+body{margin:0;background:#0e0e10}
+a{color:#6cb4ff}a:hover{color:#9ccbff}
+.hg{font-family:"SF Pro Text","SF Pro",-apple-system,system-ui,sans-serif;-webkit-font-smoothing:antialiased}
+.mono{font-family:"SF Mono","SFMono-Regular",ui-monospace,"Geist Mono",monospace}
+:where(.hg) :where(button){font:inherit;color:inherit;background:none;border:0;padding:0;cursor:pointer}
+.card{display:flex;flex-direction:column;gap:6px;padding:14px 14px 15px;border-radius:6px;text-align:left;width:100%;box-sizing:border-box;background:rgba(48,48,51,0);box-shadow:inset 0 1px 0 rgba(255,255,255,0),0 2px 8px rgba(0,0,0,0);transition:background-color 150ms ease-out,box-shadow 150ms ease-out,transform 220ms cubic-bezier(.34,1.4,.64,1)}
+.card:hover{background:rgba(48,48,51,.6)}
+.card:active{transform:scale(.985)}
+.card.sel{background:#303033;box-shadow:inset 0 1px 0 rgba(255,255,255,.06),0 2px 8px rgba(0,0,0,.4)}
+.card.sel .ttl{color:#f5f5f7}
+.dot{width:8px;height:8px;border-radius:4px;flex:none}
+.d-working{background:#0a84ff;animation:pulse 1.6s ease-in-out infinite}
+.d-needs{background:#ffcc66;animation:glow 2.4s ease-in-out infinite}
+.d-done{background:#7fd48f}
+.d-idle{background:#636366}
+@keyframes pulse{0%,100%{box-shadow:0 0 0 0 rgba(10,132,255,.55)}50%{box-shadow:0 0 0 4px rgba(10,132,255,0)}}
+@keyframes glow{0%,100%{box-shadow:0 0 0 0 rgba(255,204,102,0)}50%{box-shadow:0 0 0 5px rgba(255,204,102,.18)}}
+.seg{position:relative;display:grid;grid-template-columns:repeat(2,minmax(0,1fr));background:#222224;border-radius:8px;padding:3px;height:34px;box-sizing:border-box}
+.seg-thumb{position:absolute;top:3px;bottom:3px;left:3px;width:calc(50% - 3px);border-radius:5px;background:#303033;box-shadow:inset 0 1px 0 rgba(255,255,255,.06),0 2px 6px rgba(0,0,0,.4);transition:transform 260ms cubic-bezier(.34,1.45,.64,1)}
+.seg button{position:relative;font-size:12px;color:#98989d;transition:color 150ms}
+.seg button.on{color:#f5f5f7}
+.btn{display:flex;align-items:center;gap:8px;height:38px;padding:0 14px;border-radius:6px;font-size:13px;color:#e5e5e7;transition:background-color 120ms ease-out,transform 160ms cubic-bezier(.34,1.4,.64,1)}
+.btn:hover{background:#2c2c2e}
+.btn:active{transform:scale(.97)}
+.tab{display:flex;align-items:center;gap:8px;height:34px;padding:0 16px;border-radius:7px;font-size:13px;color:#98989d;transition:background-color 120ms,color 120ms}
+.tab:hover{background:#222224;color:#e5e5e7}
+.tab.on{background:#222224;color:#f5f5f7;box-shadow:inset 0 1px 0 rgba(255,255,255,.06)}
+.kc{display:inline-flex;align-items:center;height:18px;padding:0 5px;border-radius:5px;border:1px solid rgba(255,255,255,.14);border-bottom-width:2px;font-size:10.5px;color:#e5e5e7;box-sizing:border-box}
+.chip{display:inline-flex;align-items:center;gap:6px;height:28px;padding:0 13px;border-radius:14px;background:#222224;font-size:12px;color:#e5e5e7;transition:background-color 120ms}
+.chip:hover{background:#2c2c2e}
+.cursor{display:inline-block;width:8px;height:16px;background:#6cb4ff;vertical-align:-3px;border-radius:1px;box-shadow:0 0 10px rgba(108,180,255,.6);animation:blink 1.1s steps(1) infinite}
+@keyframes blink{50%{opacity:.25}}
+.ico{width:15px;height:15px;flex:none}
+.note{display:inline-flex;align-items:center;gap:8px;height:30px;padding:0 12px 0 8px;border-radius:7px;align-self:flex-start;color:#98989d;font-size:12.5px;background:rgba(29,29,32,0);transition:background-color 120ms,color 120ms}
+.note:hover{background:#1d1d20;color:#e5e5e7}
+.note.open{color:#e5e5e7}
+.chev{flex:none;transition:transform 220ms cubic-bezier(.34,1.4,.64,1)}
+.note.open .chev{transform:rotate(90deg)}
+.rev{display:grid;grid-template-rows:0fr;opacity:0;transition:grid-template-rows 240ms ease-out,opacity 200ms ease-out}
+.rev.open{grid-template-rows:1fr;opacity:1}
+.rev>div{overflow:hidden;min-height:0}
+.detail{margin:2px 0 0 30px;color:#98989d;font-size:12.5px}
+.kind{display:inline-flex;align-items:center;gap:5px;height:18px;padding:0 7px;border-radius:5px;background:#2c2c2e;color:#c7c7cc;font-size:10.5px;font-weight:500;white-space:nowrap;flex:none}
+.d-failed{background:#ff8078}
+.lim{background:#222224;border-radius:8px;padding:10px 12px;display:flex;flex-direction:column;gap:6px}
+.lim-top{display:flex;justify-content:space-between;font-size:12px;color:#e5e5e7}
+.lim-top .mono{font-size:11px;color:#98989d}
+.lim-bar{height:4px;border-radius:2px;background:#2c2c2e;overflow:hidden}
+.lim-sub{font-size:11px;color:#98989d}
+.br{display:none}
+.card:hover .br{display:inline}
+.scroller{scrollbar-width:none}
+.scroller::-webkit-scrollbar{display:none}
+.card.new{animation:cardin 480ms cubic-bezier(.34,1.4,.64,1) both}
+@keyframes cardin{from{opacity:0;transform:translateY(-8px) scale(.97)}}
+.scrim{position:absolute;inset:0;z-index:5;background:rgba(8,8,10,.5);backdrop-filter:blur(4px);animation:fade 160ms ease-out both}
+@keyframes fade{from{opacity:0}}
+.sheet{position:absolute;z-index:6;background:#18181a;border-radius:16px;box-shadow:inset 0 1px 0 rgba(255,255,255,.06),0 20px 48px rgba(0,0,0,.55);padding:20px;box-sizing:border-box;display:flex;flex-direction:column;gap:12px;animation:enter 220ms cubic-bezier(.2,.9,.3,1.15) both}
+.sheet.pop{transform-origin:bottom left;animation:popin 240ms cubic-bezier(.2,.9,.3,1.15) both}
+@keyframes enter{from{opacity:0;transform:translateY(8px) scale(.98)}}
+@keyframes popin{from{opacity:0;transform:translateX(-10px) scale(.98)}}
+.sh-head{display:flex;align-items:center;gap:10px;padding:0 4px}
+.h15{font-size:15px;font-weight:600;color:#f5f5f7}
+.meta{font-size:11px;color:#98989d}
+.grp{background:#222224;border-radius:8px;padding:6px;display:flex;flex-direction:column;gap:4px}
+.gname{height:28px;display:flex;align-items:center;justify-content:space-between;padding:0 14px;font-size:11px;font-weight:600;color:#7d8aa3}
+.gcount{font-weight:400;color:#98989d}
+.prow{display:flex;align-items:center;gap:12px;height:40px;padding:0 14px;border-radius:6px;font-size:14px;color:#e5e5e7;width:100%;box-sizing:border-box;text-align:left;background:rgba(48,48,51,0);transition:background-color 80ms ease-out,box-shadow 80ms ease-out}
+.prow:hover{background:rgba(48,48,51,.6)}
+.prow.on{background:#303033;color:#f5f5f7;box-shadow:inset 0 1px 0 rgba(255,255,255,.06),0 2px 8px rgba(0,0,0,.4)}
+.prow.on .pi{color:#0a84ff}
+.pi{width:15px;height:15px;flex:none;color:#98989d;transition:color 80ms}
+.chk{width:18px;height:18px;border-radius:5px;flex:none;display:flex;align-items:center;justify-content:center;background:#0a84ff;opacity:0;transform:scale(.5);transition:opacity 120ms,transform 240ms cubic-bezier(.34,1.6,.64,1)}
+.chk.on{opacity:1;transform:none}
+.orow{display:flex;align-items:center;gap:12px;min-height:46px;padding:6px 14px;border-radius:6px;font-size:14px;color:#e5e5e7;width:100%;box-sizing:border-box;text-align:left;transition:background-color 80ms}
+button.orow:hover{background:rgba(48,48,51,.6)}
+.sub{display:block;font-size:12px;color:#98989d;margin-top:2px}
+.opts{display:flex;gap:2px;background:#18181a;border-radius:7px;padding:3px}
+.opt{height:28px;padding:0 12px;border-radius:5px;font-size:12px;color:#98989d;transition:background-color 120ms,color 120ms,box-shadow 120ms}
+.opt:hover{color:#e5e5e7}
+.opt.on{background:#303033;color:#f5f5f7;box-shadow:inset 0 1px 0 rgba(255,255,255,.06),0 2px 6px rgba(0,0,0,.4)}
+.trk{position:relative;width:36px;height:18px;border-radius:5px;flex:none;transition:background-color 120ms}
+.trk.off{background:#2c2c2e;box-shadow:inset 0 1px 2px rgba(0,0,0,.45)}
+.trk.on{background:#0a84ff;box-shadow:inset 0 1px 0 rgba(255,255,255,.18)}
+.knob{position:absolute;top:2px;left:2px;width:16px;height:14px;border-radius:3px;background:#c7c7cc;box-shadow:0 1px 2px rgba(0,0,0,.4);transition:transform 180ms cubic-bezier(.34,1.5,.64,1),background-color 120ms}
+.trk.on .knob{transform:translateX(16px);background:#fff}
+.ta,.inp{width:100%;box-sizing:border-box;background:#18181a;border:0;border-radius:6px;color:#f5f5f7;font:inherit;font-size:13px;outline:none;box-shadow:inset 0 0 0 1px rgba(255,255,255,0);transition:box-shadow 120ms}
+.ta{min-height:84px;resize:none;padding:12px 14px;line-height:1.5}
+.inp{height:38px;padding:0 14px;background:#222224}
+.ta:focus,.inp:focus{box-shadow:inset 0 0 0 1px rgba(108,180,255,.55)}
+.ta::placeholder,.inp::placeholder{color:#636366}
+.sh-foot{display:flex;align-items:center;gap:8px;padding:4px 4px 0}
+.b{display:flex;align-items:center;justify-content:center;gap:8px;height:38px;padding:0 16px;border-radius:7px;font-size:13px;transition:filter 120ms,background-color 120ms,transform 160ms cubic-bezier(.34,1.4,.64,1)}
+.b:active{transform:scale(.97)}
+.b-pri{background:#0a84ff;color:#fff;font-weight:500;box-shadow:inset 0 1px 0 rgba(255,255,255,.18)}
+.b-pri:hover{filter:brightness(1.1)}
+.b-sec{background:#2c2c2e;color:#e5e5e7}
+.b-sec:hover{background:#363639}
+.kc-on{border-color:rgba(255,255,255,.35);color:#fff}
+.icb{width:32px;height:32px;border-radius:6px;display:flex;align-items:center;justify-content:center;color:#98989d;transition:background-color 120ms,color 120ms}
+.icb:hover{background:#2c2c2e;color:#e5e5e7}
+.toastm{position:absolute;right:24px;bottom:24px;z-index:7;display:flex;align-items:center;gap:10px;padding:14px 18px;background:#18181a;border-radius:12px;box-shadow:inset 0 1px 0 rgba(255,255,255,.06),0 20px 48px rgba(0,0,0,.55);font-size:13px;color:#f5f5f7;animation:tin 280ms cubic-bezier(.2,.9,.3,1.2) both}
+@keyframes tin{from{opacity:0;transform:translateY(10px)}}
+</style>
+</helmet>
+<div class="hg" style="position:relative;width:1440px;height:900px;box-sizing:border-box;background:#0e0e10;color:#e5e5e7;display:flex;gap:8px;padding:8px;overflow:hidden">
+
+  <aside style="width:316px;flex:none;background:#18181a;border-radius:12px;box-shadow:inset 0 1px 0 rgba(255,255,255,.06);display:flex;flex-direction:column;padding:18px 14px 14px;box-sizing:border-box;gap:14px;min-height:0">
+    <a href="Command.dc.html" class="btn" style="text-decoration:none;color:#f5f5f7;background:#222224;height:42px;box-shadow:inset 0 1px 0 rgba(255,255,255,.05)">
+      <svg class="ico" viewBox="0 0 24 24" fill="none" stroke="#98989d" stroke-width="1.7" stroke-linejoin="round" aria-hidden="true"><rect x="4" y="4" width="7" height="7" rx="2"></rect><rect x="13" y="4" width="7" height="7" rx="2"></rect><rect x="4" y="13" width="7" height="7" rx="2"></rect><rect x="13" y="13" width="7" height="7" rx="2"></rect></svg>
+      <span style="flex:1;font-weight:500">Command center</span>
+      <span class="mono" style="display:inline-flex;align-items:center;gap:5px;height:20px;padding:0 8px;border-radius:10px;background:rgba(255,204,102,.14);color:#ffcc66;font-size:11px"><span class="dot d-needs" style="width:6px;height:6px;animation:none"></span>2 need you</span>
+      <span style="display:flex;gap:3px"><span class="kc mono">alt</span><span class="kc mono">0</span></span>
+    </a>
+    <div style="display:flex;align-items:center;justify-content:space-between;padding:0 6px">
+      <div style="font-size:15px;font-weight:600;color:#f5f5f7">Agents</div>
+      <div class="mono" style="font-size:11px;color:#98989d">{{liveText}}</div>
+    </div>
+
+    <div style="display:flex;flex-direction:column">
+      <div class="lim"><div class="lim-top"><span>Weekly limit</span><span class="mono">41 %</span></div><div class="lim-bar"><div style="width:41%;height:100%;background:#0a84ff;border-radius:2px"></div></div><div class="lim-sub">resets Monday</div></div>
+    </div>
+
+    <a href="CommandBar.dc.html" class="btn" style="background:#222224;height:40px;text-decoration:none;color:#98989d;box-shadow:inset 0 1px 0 rgba(255,255,255,.04)">
+      <svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="6.5"></circle><path d="m16 16 4 4"></path></svg>
+      <span style="flex:1">Search or run a command</span>
+      <span style="display:flex;gap:3px"><span class="kc mono">ctrl</span><span class="kc mono">space</span></span>
+    </a>
+
+    <div class="seg">
+      <div class="seg-thumb" style="{{thumbStyle}}"></div>
+      <button class="{{projCls}}" onClick="{{byProject}}">By project</button>
+      <button class="{{stateCls}}" onClick="{{byState}}">By state</button>
+    </div>
+
+    <div style="position:relative;flex:1;min-height:0;display:flex">
+    <div class="scroller" onScroll="{{onScroll}}" style="flex:1;min-height:0;overflow:auto;display:flex;flex-direction:column;gap:10px;border-radius:8px">
+      <sc-for list="{{groups}}" as="g" hint-placeholder-count="3">
+        <section style="background:#222224;border-radius:8px;padding:6px;display:flex;flex-direction:column;gap:4px">
+          <div style="height:28px;display:flex;align-items:center;justify-content:space-between;padding:0 14px">
+            <span style="font-size:11px;font-weight:600;color:#7d8aa3">{{g.name}}</span>
+            <span class="mono" style="font-size:11px;color:#98989d">{{g.count}}</span>
+          </div>
+          <sc-for list="{{g.items}}" as="s" hint-placeholder-count="2">
+            <button class="{{s.cls}}" onClick="{{s.pick}}">
+              <div style="display:flex;align-items:center;gap:8px;width:100%">
+                <span class="{{s.dot}}"></span>
+                <span class="ttl" style="flex:1;font-size:13px;font-weight:500;color:#e5e5e7;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{s.title}}</span>
+                <span class="mono" style="{{s.stateStyle}}">{{s.stateText}}</span>
+              </div>
+              <div style="padding-left:18px;display:flex;align-items:center;gap:8px;width:100%;min-width:0;box-sizing:border-box"><span class="kind"><sc-if value="{{s.isAgent}}" hint-placeholder-val="{{false}}"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 4v4M12 16v4M4 12h4M16 12h4M7 7l2 2M15 15l2 2M17 7l-2 2M9 15l-2 2"></path></svg></sc-if><sc-if value="{{s.isCi}}" hint-placeholder-val="{{false}}"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="8"></circle><path d="m8.5 12 2.5 2.5 4.5-5"></path></svg></sc-if><sc-if value="{{s.isDeploy}}" hint-placeholder-val="{{false}}"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 19V7M7 11l5-5 5 5M5 20h14"></path></svg></sc-if><sc-if value="{{s.isTerm}}" hint-placeholder-val="{{false}}"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m5 8 4 4-4 4M12 16h7"></path></svg></sc-if>{{s.kindLabel}}</span><span class="mono" style="font-size:11px;color:#98989d;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0">{{s.projPart}}<span class="br">{{s.branch}} · </span>{{s.time}}</span></div>
+              <sc-if value="{{s.hasBar}}" hint-placeholder-val="{{true}}">
+              <div style="padding-left:18px;display:flex;align-items:center;gap:8px;width:100%;box-sizing:border-box">
+                <div style="flex:1;height:4px;border-radius:2px;background:#2c2c2e;overflow:hidden"><div style="{{s.bar}}"></div></div>
+                <span class="mono" style="font-size:11px;color:#98989d">{{s.barText}}</span>
+              </div>
+              </sc-if>
+              <div style="padding-left:18px;font-size:12px;color:#98989d;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;width:100%;box-sizing:border-box">{{s.last}}</div>
+            </button>
+          </sc-for>
+        </section>
+      </sc-for>
+    </div>
+    <div aria-hidden="true" style="{{sbStyle}}"></div>
+    </div>
+
+    <a href="Restore.dc.html" class="btn" style="text-decoration:none;color:#e5e5e7;background:#222224;height:40px">
+      <svg class="ico" viewBox="0 0 24 24" fill="none" stroke="#98989d" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 12a8 8 0 1 0 2.3-5.6M4 4v5h5"></path></svg>
+      <span style="flex:1">Closed sessions</span>
+      <span class="mono" style="font-size:11px;color:#98989d">7</span>
+      <span style="display:flex;gap:3px"><span class="kc mono">ctrl</span><span class="kc mono">⇧</span><span class="kc mono">t</span></span>
+    </a>
+    <div style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px">
+      <button class="btn" style="background:#222224;justify-content:center" onClick="{{openNs}}">
+        <svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"></path></svg>New session
+      </button>
+      <button class="btn" style="background:#222224;justify-content:center" onClick="{{openPr}}">
+        <svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 5h14v10H9l-4 4z"></path></svg>Prompts
+      </button>
+    </div>
+  </aside>
+
+  <main style="flex:1;min-width:0;display:flex;flex-direction:column;gap:8px">
+    <div style="height:50px;flex:none;display:flex;align-items:center;gap:6px;padding:0 8px;background:#18181a;border-radius:12px;box-shadow:inset 0 1px 0 rgba(255,255,255,.06)">
+      <button class="tab on"><span class="{{selDot}}"></span>{{selTitle}}</button>
+      <button class="tab"><svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m5 8 4 4-4 4M12 16h7"></path></svg>dev server</button>
+      <button class="tab"><svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 4h7l4 4v12H7z"></path><path d="M14 4v4h4"></path></svg>nvim</button>
+      <button class="tab" aria-label="New tab"><svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"></path></svg></button>
+      <div style="flex:1"></div>
+      <span class="mono" style="font-size:11px;color:#98989d;margin-right:8px">{{selMeta}}</span>
+      <button class="btn" aria-label="Split right" style="padding:0 11px"><svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><rect x="4" y="5" width="16" height="14" rx="2.5"></rect><path d="M12 5v14"></path></svg></button>
+      <button class="btn" aria-label="Zoom pane" style="padding:0 11px"><svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 5h5v5M10 19H5v-5M19 5l-6 6M5 19l6-6"></path></svg></button>
+    </div>
+
+    <section style="{{paneStyle}}">
+      <div style="display:flex;flex-direction:column;gap:14px;flex:1;min-height:0;overflow:hidden">
+        <sc-if value="{{isOther}}" hint-placeholder-val="{{false}}">
+          <div style="display:flex;align-items:center;gap:10px;font-family:'SF Pro Text',-apple-system,system-ui,sans-serif">
+            <span class="kind" style="height:22px;font-size:12px">{{cur.kindLabel}}</span>
+            <span style="font-size:15px;font-weight:600;color:#f5f5f7">{{cur.title}}</span>
+            <span class="mono" style="{{cur.stateStyle}}">{{cur.stateText}}</span>
+            <div style="flex:1"></div>
+            <sc-if value="{{cur.canFix}}" hint-placeholder-val="{{false}}"><button class="b b-pri" onClick="{{askFix}}">Ask Claude to fix it</button></sc-if>
+            <button class="b b-sec">Open in browser</button>
+          </div>
+          <div style="display:flex;flex-direction:column;gap:6px;color:#98989d">
+            <sc-for list="{{cur.log}}" as="l" hint-placeholder-count="4"><div style="{{l.style}}">{{l.text}}</div></sc-for>
+          </div>
+        </sc-if>
+        <sc-if value="{{notS1}}" hint-placeholder-val="{{false}}">
+          <div style="display:flex;flex-direction:column;gap:4px;padding:14px 18px;border-radius:8px;background:#1d1d20;align-self:flex-start">
+            <div style="color:#6cb4ff">✻ Claude Code <span style="color:#98989d">· {{cur.model}} · {{cur.effort}} thinking</span></div>
+            <div style="color:#98989d">Folder ~/Projects/{{cur.project}} · {{cur.branch}}</div>
+          </div>
+          <sc-if value="{{cur.hasPrompt}}" hint-placeholder-val="{{false}}">
+            <div style="background:#1d1d20;border-radius:6px;padding:8px 12px;color:#f5f5f7"><span style="color:#6cb4ff">›</span> {{cur.prompt}}</div>
+          </sc-if>
+          <div style="{{cur.lastLineStyle}}">✻ {{cur.last}}</div>
+        </sc-if>
+        <sc-if value="{{isS1}}" hint-placeholder-val="{{true}}">
+        <div style="background:#1d1d20;border-radius:8px;padding:10px 14px;color:#f5f5f7;align-self:flex-start;max-width:760px"><span style="color:#6cb4ff">›</span> the POST to /api/feedback hangs on Vercel but not locally. find out why and fix it</div>
+        <div style="display:flex;flex-direction:column;gap:4px">
+          <button class="{{rv.readCls}}" onClick="{{rv.toggleRead}}"><svg class="chev" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9 6 6 6-6 6"></path></svg>Read the feedback form code</button>
+          <div class="{{rv.readRev}}"><div><div class="detail">app/api/feedback/route.ts · 48 lines</div></div></div>
+        </div>
+        <div style="max-width:760px">Found it. The form handler starts its reply before it reads what the visitor sent. On Vercel, the message is then never read, so the request waits forever. I will read the message first.</div>
+        <div style="display:flex;flex-direction:column;gap:4px">
+          <button class="{{rv.diffCls}}" onClick="{{rv.toggleDiff}}"><svg class="chev" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9 6 6 6-6 6"></path></svg>Changed route.ts<span style="color:#636366">· show changes</span></button>
+          <div class="{{rv.diffRev}}"><div>
+            <div style="margin:4px 0 0 22px;border-radius:8px;overflow:hidden;font-size:12.5px;max-width:720px">
+              <div style="background:#2a1d1e;color:#ffb3ad;padding:3px 12px">- const stream = startStream(); const body = await req.json();</div>
+              <div style="background:#1b2a1f;color:#a8e6b4;padding:3px 12px">+ const body = await req.json();</div>
+              <div style="background:#1b2a1f;color:#a8e6b4;padding:3px 12px">+ const stream = startStream(body);</div>
+            </div>
+          </div></div>
+        </div>
+        <div style="display:flex;flex-direction:column;gap:4px">
+          <button class="{{rv.runCls}}" onClick="{{rv.toggleRun}}"><span class="dot d-working" style="margin:0 2px"></span>Testing the form on the preview site<span style="color:#636366">· show output</span></button>
+          <div class="{{rv.runRev}}"><div><div class="detail">$ pnpm smoke:post --url $PREVIEW_URL<br>POST /api/feedback … waiting for a reply</div></div></div>
+        </div>
+        <div style="color:#6cb4ff">✻ Testing now <span style="color:#98989d">· 1m 12s</span></div>
+        </sc-if>
+      </div>
+
+      <sc-if value="{{cur.isAgent}}" hint-placeholder-val="{{true}}">
+      <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;font-family:'SF Pro Text',-apple-system,system-ui,sans-serif">
+        <button class="chip"><svg class="ico" style="width:13px;height:13px;color:#7fd48f" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m5 12 5 5 9-10"></path></svg>Handoff ready</button>
+        <button class="chip"><span class="mono" style="color:#6cb4ff">2</span>queued prompts</button>
+      </div>
+
+      <div style="border-radius:8px;background:#1d1d20;box-shadow:inset 0 0 0 1px rgba(108,180,255,.35),0 0 0 3px rgba(10,132,255,.08);padding:14px 18px;display:flex;align-items:center;gap:10px">
+        <span style="color:#6cb4ff">›</span>
+        <sc-if value="{{hasDraft}}" hint-placeholder-val="{{false}}"><span class="draft" style="color:#f5f5f7;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{draft}}</span><span class="cursor" style="flex:none"></span><div style="flex:1"></div><span style="font-size:11px;color:#98989d;flex:none">↵ send</span></sc-if>
+        <sc-if value="{{noDraft}}" hint-placeholder-val="{{true}}"><span style="color:#636366">Reply, or / for commands</span><span class="cursor" style="margin-left:-6px"></span></sc-if>
+      </div>
+
+      <div style="display:flex;align-items:center;gap:14px;font-size:12px;color:#98989d;white-space:nowrap">
+        <span style="color:#e5e5e7">{{cur.model}}</span>
+        <span style="display:flex;align-items:center;gap:6px">context used <span style="display:inline-block;width:56px;height:4px;border-radius:2px;background:#2c2c2e;overflow:hidden"><span style="{{cur.ctxBar}}"></span></span>{{cur.ctxNum}} %</span>
+        <span>{{cur.branch}}<sc-if value="{{isS1}}" hint-placeholder-val="{{true}}"> <span style="color:#7fd48f">+3</span> <span style="color:#ff8078">−1</span></sc-if></span>
+        <span style="display:flex;align-items:center;gap:6px">session limit <span style="display:inline-block;width:56px;height:4px;border-radius:2px;background:#2c2c2e;overflow:hidden"><span style="display:block;width:34%;height:100%;background:#0a84ff"></span></span>34 %</span>
+        <sc-if value="{{cur.rc}}" hint-placeholder-val="{{false}}"><span style="color:#6cb4ff">remote on</span></sc-if>
+        <div style="flex:1"></div>
+        <span style="color:#ffcc66">bypass on</span>
+        <span>shift+tab change mode · esc stop Claude</span>
+      </div>
+      </sc-if>
+    </section>
+
+    <section class="mono" style="height:150px;flex:none;background:#121214;border-radius:12px;box-shadow:inset 0 1px 0 rgba(255,255,255,.05);padding:14px 22px;box-sizing:border-box;font-size:12.5px;line-height:1.6;color:#98989d;overflow:hidden">
+      <div style="display:flex;justify-content:space-between;font-family:'SF Pro Text',-apple-system,system-ui,sans-serif;font-size:11px;margin-bottom:6px"><span style="font-weight:600;color:#7d8aa3">dev server</span><span class="mono" style="color:#7fd48f">running</span></div>
+      <div><span style="color:#6cb4ff">▲ Next.js</span> 15.4 · Local http://localhost:3000</div>
+      <div><span style="color:#7fd48f">✓</span> Compiled /api/feedback in 412 ms</div>
+      <div>POST /api/feedback <span style="color:#7fd48f">200</span> in 88 ms</div>
+    </section>
+  </main>
+
+  <sc-if value="{{anyOpen}}" hint-placeholder-val="{{false}}">
+    <div class="scrim" onClick="{{closeAll}}"></div>
+  </sc-if>
+
+  <sc-if value="{{nsOpen}}" hint-placeholder-val="{{false}}">
+    <div class="sheet" role="dialog" aria-label="New session" style="left:50%;top:64px;margin-left:-310px;width:620px">
+      <div class="sh-head">
+        <span class="h15">New session</span>
+        <span class="meta">opens in a new tab</span>
+        <div style="flex:1"></div>
+        <button class="icb" aria-label="Close" onClick="{{closeAll}}"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"></path></svg></button>
+      </div>
+      <div class="grp">
+        <div class="gname"><span>Project</span><span class="mono gcount">{{projCount}}</span></div>
+        <sc-for list="{{projects}}" as="p" hint-placeholder-count="4">
+          <button class="{{p.cls}}" onClick="{{p.pick}}">
+            <svg class="pi" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round" aria-hidden="true"><path d="M4 7a2 2 0 0 1 2-2h4l2 2h6a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2z"></path></svg>
+            <span style="flex:1">{{p.name}}</span>
+            <span class="mono meta">{{p.path}}</span>
+            <span class="{{p.chk}}"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m5 12 5 5 9-10"></path></svg></span>
+          </button>
+        </sc-for>
+      </div>
+      <div class="grp">
+        <div class="gname"><span>Options</span></div>
+        <div class="orow"><span style="flex:1">Model</span><div class="opts"><sc-for list="{{models}}" as="m" hint-placeholder-count="2"><button class="{{m.cls}}" onClick="{{m.pick}}">{{m.label}}</button></sc-for></div></div>
+        <div class="orow"><span style="flex:1">Thinking<span class="sub">More thinking is slower and uses more of your limits</span></span><div class="opts"><sc-for list="{{efforts}}" as="m" hint-placeholder-count="3"><button class="{{m.cls}}" onClick="{{m.pick}}">{{m.label}}</button></sc-for></div></div>
+        <button class="orow" onClick="{{toggleWt}}"><span style="flex:1">New worktree<span class="sub">Changes stay apart from other sessions in this project</span></span><span class="{{wtTrack}}"><span class="knob"></span></span></button>
+        <button class="orow" onClick="{{toggleRc}}"><span style="flex:1">Remote Control<span class="sub">See and answer this session from the Claude app</span></span><span class="{{rcTrack}}"><span class="knob"></span></span></button>
+      </div>
+      <div class="grp">
+        <div class="gname"><span>First message</span><span class="gcount">optional</span></div>
+        <div style="padding:4px 8px 8px;display:flex;flex-direction:column;gap:10px">
+          <textarea class="ta" aria-label="First message" placeholder="What should Claude do first?" value="{{nsPrompt}}" onChange="{{onNsPrompt}}"></textarea>
+          <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center">
+            <span class="meta" style="margin-right:2px">Use a saved prompt:</span>
+            <sc-for list="{{savedChips}}" as="c" hint-placeholder-count="3"><button class="chip" onClick="{{c.use}}">{{c.title}}</button></sc-for>
+          </div>
+        </div>
+      </div>
+      <div class="sh-foot">
+        <span class="meta">{{nsSummary}}</span>
+        <div style="flex:1"></div>
+        <button class="b b-sec" onClick="{{closeAll}}">Cancel</button>
+        <button class="b b-pri" onClick="{{startSession}}">Start session <span class="kc mono kc-on">ctrl ↵</span></button>
+      </div>
+    </div>
+  </sc-if>
+
+  <sc-if value="{{prOpen}}" hint-placeholder-val="{{false}}">
+    <div class="sheet pop" role="dialog" aria-label="Prompts" style="left:332px;bottom:8px;width:740px;height:620px;flex-direction:row;padding:0;gap:0;overflow:hidden">
+      <div style="width:300px;flex:none;display:flex;flex-direction:column;gap:12px;padding:20px 14px 14px;box-sizing:border-box">
+        <div class="sh-head">
+          <span class="h15">Prompts</span>
+          <span class="mono meta">{{prCount}}</span>
+          <div style="flex:1"></div>
+          <button class="icb" aria-label="New prompt" onClick="{{newPrompt}}"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"></path></svg></button>
+        </div>
+        <input class="inp" type="text" aria-label="Search prompts" placeholder="Search prompts" value="{{prQ}}" onChange="{{onPrQ}}">
+        <div class="scroller" style="flex:1;min-height:0;overflow:auto;display:flex;flex-direction:column;gap:10px">
+          <sc-for list="{{prGroups}}" as="g" hint-placeholder-count="2">
+            <div class="grp">
+              <div class="gname"><span>{{g.name}}</span><span class="mono gcount">{{g.count}}</span></div>
+              <sc-for list="{{g.items}}" as="p" hint-placeholder-count="3">
+                <button class="{{p.cls}}" onClick="{{p.pick}}">
+                  <svg class="pi" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round" aria-hidden="true"><path d="M5 5h14v10H9l-4 4z"></path></svg>
+                  <span style="flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{p.title}}</span>
+                  <span class="mono meta">{{p.uses}}</span>
+                </button>
+              </sc-for>
+            </div>
+          </sc-for>
+          <sc-if value="{{prEmpty}}" hint-placeholder-val="{{false}}"><div class="meta" style="font-size:13px;padding:8px 14px">No prompt has that name.</div></sc-if>
+        </div>
+      </div>
+      <div style="flex:1;min-width:0;background:#1c1c1e;padding:20px 22px;box-sizing:border-box;display:flex;flex-direction:column;gap:14px">
+        <sc-if value="{{prEditing}}" hint-placeholder-val="{{false}}">
+          <div class="sh-head" style="padding:0"><span class="h15">New prompt</span><div style="flex:1"></div><button class="icb" aria-label="Close" onClick="{{closeAll}}"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"></path></svg></button></div>
+          <input class="inp" type="text" aria-label="Prompt name" placeholder="Name, for example: Explain this error" value="{{edTitle}}" onChange="{{onEdTitle}}">
+          <textarea class="ta" style="flex:1;background:#222224" aria-label="Prompt text" placeholder="What Claude should do" value="{{edBody}}" onChange="{{onEdBody}}"></textarea>
+          <div class="sh-foot" style="padding:0"><div style="flex:1"></div><button class="b b-sec" onClick="{{cancelEdit}}">Cancel</button><button class="b b-pri" onClick="{{savePrompt}}">Save prompt</button></div>
+        </sc-if>
+        <sc-if value="{{prViewing}}" hint-placeholder-val="{{true}}">
+          <div class="sh-head" style="padding:0"><span class="h15">{{prCur.title}}</span><span class="meta">{{prCur.usesLong}}</span><div style="flex:1"></div><button class="icb" aria-label="Close" onClick="{{closeAll}}"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"></path></svg></button></div>
+          <div class="scroller" style="flex:1;min-height:0;overflow:auto;background:#222224;border-radius:8px;padding:16px 18px;font-size:13px;line-height:1.6;white-space:pre-line;color:#e5e5e7">{{prCur.body}}</div>
+          <div class="grp"><div class="orow"><span class="meta" style="font-size:12px">Send to</span><span class="{{selDot}}"></span><span style="flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{selTitle}}</span><a href="CommandBar.dc.html" style="font-size:12px">Choose more sessions</a></div></div>
+          <div class="sh-foot" style="padding:0">
+            <div style="flex:1"></div>
+            <button class="b b-sec" onClick="{{insertPrompt}}">Put in message box</button>
+            <button class="b b-pri" onClick="{{sendPrompt}}">Send now <span class="kc mono kc-on">ctrl ↵</span></button>
+          </div>
+        </sc-if>
+      </div>
+    </div>
+  </sc-if>
+
+  <sc-if value="{{toastShow}}" hint-placeholder-val="{{false}}">
+    <div class="toastm" role="status">
+      <span style="width:18px;height:18px;border-radius:9px;background:#7fd48f;display:flex;align-items:center;justify-content:center"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#0e0e10" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m5 12 5 5 9-10"></path></svg></span>
+      {{toastText}}
+    </div>
+  </sc-if>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"paneFont":{"editor":"enum","options":["SF Mono","Geist Mono","JetBrains Mono"],"default":"SF Mono","section":"Pane"},"panePadding":{"editor":"range","min":8,"max":48,"step":2,"unit":"px","default":28,"section":"Pane"},"$preview":{"width":1440,"height":900}}'>
+class Component extends DCLogic {
+  constructor(p) {
+    super(p);
+    this.state = {
+      mode: 'project', sel: 's1', sb: { top: 0, h: 0, show: false },
+      extra: [], ovr: {}, drafts: {}, panel: null, n: 0, newId: null,
+      ns: { proj: 'acme-site', model: 'Opus 5.5', effort: 'High', wt: false, rc: true, prompt: '' },
+      prompts: [
+        { id: 'p1', kind: 'Saved', title: 'Write a handoff', uses: 12, body: 'Write a handoff for this session in docs/HANDOFF.md.\n\nSay what is done, what is next and what is still open. Keep it short.' },
+        { id: 'p2', kind: 'Saved', title: 'Review the changes', uses: 8, body: 'Review the changes in this session. Report only problems you can show with an example that fails.' },
+        { id: 'p3', kind: 'Saved', title: 'Test the live site', uses: 5, body: 'When the new version is live, try each form and page on the preview link. Tell me what works, what fails and how long each one takes.' },
+        { id: 'r1', kind: 'Recent', title: 'Explain this error', uses: 2, body: 'Explain this error in plain words, then tell me the smallest change that fixes it.' },
+        { id: 'r2', kind: 'Recent', title: 'Run the tests and fix failures', uses: 1, body: 'Run the tests. Fix each failure, then run them again until they all pass.' }
+      ],
+      rv: { read: false, diff: false, run: false }, prSel: 'p1', prQ: '', editing: false, ed: { title: '', body: '' }, toast: null
+    };
+  }
+  componentWillUnmount() { clearTimeout(this._t); clearTimeout(this._tt); }
+  showToast(text) {
+    clearTimeout(this._tt);
+    this.setState({ toast: text });
+    this._tt = setTimeout(() => this.setState({ toast: null }), 2600);
+  }
+  renderVals() {
+    const st = this.state;
+    const onScroll = (e) => {
+      const el = e.currentTarget;
+      const max = el.scrollHeight - el.clientHeight;
+      if (max <= 0) return;
+      const h = Math.max(28, el.clientHeight * el.clientHeight / el.scrollHeight - 8);
+      const top = 4 + (el.scrollTop / max) * (el.clientHeight - h - 8);
+      this.setState({ sb: { top, h, show: true } });
+      clearTimeout(this._t);
+      this._t = setTimeout(() => this.setState({ sb: { ...this.state.sb, show: false } }), 900);
+    };
+    const sb = st.sb;
+    const sbStyle = 'position:absolute;right:2px;width:5px;border-radius:3px;background:rgba(255,255,255,.28);pointer-events:none;top:' + sb.top + 'px;height:' + sb.h + 'px;opacity:' + (sb.show ? 1 : 0) + ';transition:opacity ' + (sb.show ? '120ms' : '400ms') + ' ease-out';
+
+    const base = [
+      { id: 's1', title: 'Fix Vercel POST hang', project: 'acme-site', branch: 'main', time: '12m', st: 'working', ctx: 62, cost: 1.40, last: 'Running the smoke test now…' },
+      { id: 's2', title: 'Herdr Graphite mockups', project: 'dotfiles', branch: 'main', time: '4m', st: 'working', ctx: 18, cost: 0.52, last: 'Writing the command bar artboard' },
+      { id: 's3', title: 'Release 0.2.6 notes', project: 'Canvas', branch: 'release/0.2.6', time: '31m', st: 'needs', ctx: 74, cost: 3.10, last: 'Approve: git push origin release/0.2.6?' },
+      { id: 's4', title: 'Split view test', project: 'Canvas', branch: 'feat/split-view', time: '1h 05m', st: 'done', ctx: 88, cost: 4.85, last: 'All 14 tests pass. Ready for review.' },
+      { id: 's5', title: 'Dashboard auth fix', project: 'Dashboard', branch: 'staging', time: '2h', st: 'idle', ctx: 35, cost: 0.90, last: 'Waiting for your next prompt' },
+      { id: 'c1', kind: 'ci', title: 'Checks for feat/split-view', project: 'Canvas', branch: 'feat/split-view', time: '3m', st: 'failed', progress: 60, barText: '3 of 5 checks passed', last: 'Failed: export-svg test', canFix: true,
+        log: [['✓ Build', 'ok'], ['✓ Lint', 'ok'], ['✓ Unit tests', 'ok'], ['✕ export-svg test: the exported file has no artboard names', 'err'], ['– Package (skipped)', 'dim']] },
+      { id: 'd1', kind: 'deploy', title: 'Preview of the POST fix', project: 'acme-site', branch: 'main', time: '40s', st: 'working', stText: 'building', progress: 45, barText: 'building · 40 s', last: 'Installing packages',
+        log: [['Vercel preview · main', 'dim'], ['✓ Cloned the project', 'ok'], ['Installing packages…', 'run']] },
+      { id: 't1', kind: 'term', title: 'dev server', project: 'acme-site', branch: 'main', time: '25m', st: 'working', stText: 'running', last: 'POST /api/feedback 200 in 88 ms',
+        log: [['▲ Next.js 15.4 · http://localhost:3000', 'run'], ['✓ Compiled /api/feedback in 412 ms', 'ok'], ['POST /api/feedback 200 in 88 ms', 'dim']] }
+    ];
+    const S = st.extra.concat(base).map((s) => ({ kind: 'agent', model: 'Opus 5.5', effort: 'High', rc: false, cost: 0, ctx: 0, ...s, ...(st.ovr[s.id] || {}) }));
+    const ST = { failed: ['failed', '#ff8078', 0], needs: ['needs you', '#ffcc66', 0], working: ['working', '#6cb4ff', 1], done: ['done', '#7fd48f', 2], idle: ['ready', '#98989d', 3] };
+    const NAMES = { failed: 'Needs you', needs: 'Needs you', working: 'Working', done: 'Done', idle: 'Ready' };
+    const KIND = { agent: 'Agent', ci: 'GitHub CI', deploy: 'Deploy', term: 'Terminal' };
+    const LOGC = { ok: 'color:#7fd48f', err: 'color:#ff8078', dim: 'color:#98989d', run: 'color:#6cb4ff' };
+    const sel = st.sel;
+    const deco = (s) => ({
+      ...s,
+      cls: 'card' + (s.id === sel ? ' sel' : '') + (s.id === st.newId ? ' new' : ''),
+      dot: 'dot d-' + s.st,
+      stateText: s.stText || ST[s.st][0],
+      projPart: st.mode === 'state' ? s.project + ' · ' : '',
+      isAgent: s.kind === 'agent', isCi: s.kind === 'ci', isDeploy: s.kind === 'deploy', isTerm: s.kind === 'term',
+      kindLabel: s.kind === 'agent' ? 'Agent · ' + s.model.split(' ')[0] : KIND[s.kind],
+      hasBar: s.kind === 'agent' || s.progress != null,
+      barText: s.kind === 'agent' ? s.ctx + '% context used' : (s.barText || ''),
+      log: (s.log || []).map(([text, c]) => ({ text, style: LOGC[c] })),
+      canFix: !!s.canFix,
+      stateStyle: 'font-size:11px;color:' + ST[s.st][1],
+      meta: s.project + ' · ' + s.branch + ' · ' + s.time,
+      ctxNum: s.ctx,
+      ctx: s.ctx + '% context used',
+      cost: '$' + s.cost.toFixed(2),
+      bar: s.kind === 'agent'
+        ? 'height:100%;border-radius:2px;width:' + s.ctx + '%;background:' + (s.ctx >= 80 ? '#ffcc66' : '#0a84ff') + ';transition:width 400ms ease-out'
+        : 'height:100%;border-radius:2px;width:' + (s.progress || 0) + '%;background:' + (s.st === 'failed' ? '#ff8078' : '#0a84ff') + ';transition:width 400ms ease-out',
+      ctxBar: 'display:block;height:100%;width:' + s.ctx + '%;background:' + (s.ctx >= 80 ? '#ffcc66' : '#0a84ff'),
+      hasPrompt: !!s.prompt,
+      lastLineStyle: 'color:' + (s.st === 'working' ? '#6cb4ff' : '#98989d'),
+      pick: () => this.setState({ sel: s.id, panel: st.panel === 'pr' ? 'pr' : null })
+    });
+    const sorted = S.slice().sort((a, b) => ST[a.st][2] - ST[b.st][2]);
+    const groups = [];
+    const keyOf = st.mode === 'project' ? (s) => s.project : (s) => NAMES[s.st];
+    sorted.forEach((s) => {
+      const k = keyOf(s);
+      let g = groups.find((x) => x.name === k);
+      if (!g) { g = { name: k, items: [] }; groups.push(g); }
+      g.items.push(deco(s));
+    });
+    groups.forEach((g) => { g.count = String(g.items.length); });
+    const cur = deco(S.find((s) => s.id === sel));
+    const total = S.reduce((a, s) => a + s.cost, 0);
+    const font = { 'SF Mono': '"SF Mono","SFMono-Regular",ui-monospace,monospace', 'Geist Mono': '"Geist Mono",ui-monospace,monospace', 'JetBrains Mono': '"JetBrains Mono",ui-monospace,monospace' }[this.props.paneFont ?? 'SF Mono'];
+    const pad = this.props.panePadding ?? 28;
+    const isP = st.mode === 'project';
+
+    const ns = st.ns;
+    const setNs = (patch) => this.setState({ ns: { ...this.state.ns, ...patch } });
+    const PROJ = [
+      ['acme-site', '~/Projects/acme-site'],
+      ['Canvas', '~/Projects/canvas-app'],
+      ['dotfiles', '~/Projects/dotfiles'],
+      ['Dashboard', '~/Projects/dashboard']
+    ];
+    const projects = PROJ.map(([name, path]) => ({
+      name, path,
+      cls: 'prow' + (ns.proj === name ? ' on' : ''),
+      chk: 'chk' + (ns.proj === name ? ' on' : ''),
+      pick: () => setNs({ proj: name })
+    }));
+    const opt = (list, key) => list.map((label) => ({ label, cls: 'opt' + (ns[key] === label ? ' on' : ''), pick: () => setNs({ [key]: label }) }));
+    const startSession = () => {
+      const n = this.state.n + 1;
+      const p = this.state.ns;
+      const text = p.prompt.trim();
+      const id = 'n' + n;
+      const s = {
+        id, project: p.proj, model: p.model, effort: p.effort, rc: p.rc,
+        title: text ? (text.length > 34 ? text.slice(0, 33) + '…' : text) : 'New session',
+        branch: p.wt ? 'worktree-' + n : 'main', time: 'now',
+        st: text ? 'working' : 'idle', ctx: text ? 3 : 1, cost: 0,
+        last: text ? 'Reading the project…' : 'Waiting for your first message',
+        prompt: text
+      };
+      this.setState({ extra: [s].concat(this.state.extra), sel: id, newId: id, n, panel: null, ns: { ...p, prompt: '' } });
+      this.showToast('Started a session in ' + p.proj);
+    };
+
+    const q = st.prQ.toLowerCase();
+    const shown = st.prompts.filter((p) => !q || p.title.toLowerCase().includes(q));
+    const prGroups = ['Saved', 'Recent'].map((k) => ({
+      name: k,
+      items: shown.filter((p) => p.kind === k).map((p) => ({
+        ...p,
+        uses: p.uses + '×',
+        cls: 'prow' + (p.id === st.prSel && !st.editing ? ' on' : ''),
+        pick: () => this.setState({ prSel: p.id, editing: false })
+      }))
+    })).filter((g) => g.items.length);
+    prGroups.forEach((g) => { g.count = String(g.items.length); });
+    const pc = st.prompts.find((p) => p.id === st.prSel) || st.prompts[0];
+    const prCur = { ...pc, usesLong: 'used ' + pc.uses + (pc.uses === 1 ? ' time' : ' times') };
+    const draft = st.drafts[sel] || '';
+
+    return {
+      rv: (() => {
+        const r = st.rv;
+        const tg = (k) => () => this.setState({ rv: { ...this.state.rv, [k]: !this.state.rv[k] } });
+        return {
+          readCls: 'note' + (r.read ? ' open' : ''), readRev: 'rev' + (r.read ? ' open' : ''), toggleRead: tg('read'),
+          diffCls: 'note' + (r.diff ? ' open' : ''), diffRev: 'rev' + (r.diff ? ' open' : ''), toggleDiff: tg('diff'),
+          runCls: 'note' + (r.run ? ' open' : ''), runRev: 'rev' + (r.run ? ' open' : ''), toggleRun: tg('run')
+        };
+      })(),
+      onScroll, sbStyle, groups,
+      liveText: S.filter((s) => s.kind === 'agent').length + ' agents · ' + S.filter((s) => s.kind !== 'agent').length + ' other',
+      projCls: isP ? 'on' : '',
+      stateCls: isP ? '' : 'on',
+      thumbStyle: isP ? 'transform:translateX(0)' : 'transform:translateX(100%)',
+      byProject: () => this.setState({ mode: 'project' }),
+      byState: () => this.setState({ mode: 'state' }),
+      cur, isS1: sel === 's1', notS1: sel !== 's1' && cur.kind === 'agent', isOther: cur.kind !== 'agent',
+      askFix: () => this.setState({ panel: 'ns', ns: { ...this.state.ns, proj: cur.project, wt: true, prompt: 'The ' + cur.title + ' run failed: ' + cur.last.replace('Failed: ', '') + '. Find out why and fix it.' } }),
+      selTitle: cur.title, selDot: cur.dot, selMeta: cur.meta,
+      hasDraft: !!draft, noDraft: !draft, draft,
+      paneStyle: 'flex:1;min-height:0;background:#121214;border-radius:12px;box-shadow:inset 0 1px 0 rgba(255,255,255,.05);padding:' + pad + 'px ' + (pad + 4) + 'px ' + Math.max(pad - 8, 8) + 'px;box-sizing:border-box;display:flex;flex-direction:column;gap:14px;font-family:' + font + ';font-size:13.5px;line-height:1.55;color:#e5e5e7',
+
+      anyOpen: !!st.panel, nsOpen: st.panel === 'ns', prOpen: st.panel === 'pr',
+      openNs: () => this.setState({ panel: 'ns' }),
+      openPr: () => this.setState({ panel: 'pr', editing: false }),
+      closeAll: () => this.setState({ panel: null, editing: false }),
+
+      projects, projCount: String(PROJ.length),
+      models: opt(['Opus 5.5', 'Sonnet 5.5'], 'model'),
+      efforts: opt(['Low', 'Medium', 'High'], 'effort'),
+      wtTrack: 'trk ' + (ns.wt ? 'on' : 'off'),
+      rcTrack: 'trk ' + (ns.rc ? 'on' : 'off'),
+      toggleWt: () => setNs({ wt: !this.state.ns.wt }),
+      toggleRc: () => setNs({ rc: !this.state.ns.rc }),
+      nsPrompt: ns.prompt,
+      onNsPrompt: (e) => setNs({ prompt: e.target.value }),
+      savedChips: st.prompts.filter((p) => p.kind === 'Saved').map((p) => ({ title: p.title, use: () => setNs({ prompt: p.body }) })),
+      nsSummary: ns.proj + ' · ' + ns.model + (ns.wt ? ' · worktree' : ''),
+      startSession,
+
+      prCount: String(st.prompts.length),
+      prQ: st.prQ,
+      onPrQ: (e) => this.setState({ prQ: e.target.value }),
+      prGroups, prEmpty: prGroups.length === 0,
+      prEditing: st.editing, prViewing: !st.editing,
+      prCur,
+      newPrompt: () => this.setState({ editing: true, ed: { title: '', body: '' } }),
+      edTitle: st.ed.title, edBody: st.ed.body,
+      onEdTitle: (e) => this.setState({ ed: { ...this.state.ed, title: e.target.value } }),
+      onEdBody: (e) => this.setState({ ed: { ...this.state.ed, body: e.target.value } }),
+      cancelEdit: () => this.setState({ editing: false }),
+      savePrompt: () => {
+        const ed = this.state.ed;
+        if (!ed.title.trim() || !ed.body.trim()) return;
+        const id = 'u' + Date.now();
+        this.setState({ prompts: [{ id, kind: 'Saved', title: ed.title.trim(), uses: 0, body: ed.body.trim() }].concat(this.state.prompts), prSel: id, editing: false });
+        this.showToast('Saved “' + ed.title.trim() + '”');
+      },
+      insertPrompt: () => {
+        this.setState({ drafts: { ...this.state.drafts, [sel]: pc.body.replace(/\n+/g, ' ') }, panel: null });
+      },
+      sendPrompt: () => {
+        const bump = this.state.prompts.map((p) => (p.id === pc.id ? { ...p, uses: p.uses + 1 } : p));
+        const d = { ...this.state.drafts }; delete d[sel];
+        this.setState({ prompts: bump, panel: null, drafts: d, ovr: { ...this.state.ovr, [sel]: { st: 'working', last: 'Working on: ' + pc.title, prompt: pc.body.replace(/\n+/g, ' ') } } });
+        this.showToast('Sent “' + pc.title + '” to ' + cur.title);
+      },
+      toastShow: !!st.toast, toastText: st.toast || ''
+    };
+  }
+}
+</script>
+</body>
+</html>

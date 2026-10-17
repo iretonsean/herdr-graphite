@@ -1,0 +1,355 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Herdr: hybrid session view</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<style>
+body{margin:0;background:#0e0e10}
+.hg{font-family:"SF Pro Text","SF Pro",-apple-system,system-ui,sans-serif;-webkit-font-smoothing:antialiased}
+.mono{font-family:"SF Mono","SFMono-Regular",ui-monospace,monospace}
+:where(.hg) :where(button){font:inherit;color:inherit;background:none;border:0;padding:0;cursor:pointer}
+.scroller{scrollbar-width:none}.scroller::-webkit-scrollbar{display:none}
+.meta{font-size:11px;color:#98989d}
+.lbl{font-size:11px;font-weight:600;color:#7d8aa3}
+.dot{width:8px;height:8px;border-radius:4px;flex:none}
+.d-working{background:#0a84ff;animation:pulse 1.6s ease-in-out infinite}
+.d-needs{background:#ffcc66;animation:glow 2.4s ease-in-out infinite}
+.d-done{background:#7fd48f}.d-idle{background:#636366}.d-failed{background:#ff8078}
+@keyframes pulse{0%,100%{box-shadow:0 0 0 0 rgba(10,132,255,.55)}50%{box-shadow:0 0 0 4px rgba(10,132,255,0)}}
+@keyframes glow{0%,100%{box-shadow:0 0 0 0 rgba(255,204,102,0)}50%{box-shadow:0 0 0 5px rgba(255,204,102,.18)}}
+.kind{display:inline-flex;align-items:center;height:18px;padding:0 7px;border-radius:5px;background:#2c2c2e;color:#c7c7cc;font-size:10.5px;font-weight:500;white-space:nowrap;flex:none}
+.kc{display:inline-flex;align-items:center;justify-content:center;min-width:18px;height:18px;padding:0 5px;border-radius:5px;border:1px solid rgba(255,255,255,.14);border-bottom-width:2px;font-size:10.5px;color:#c7c7cc;box-sizing:border-box}
+.grp{background:#222224;border-radius:8px;padding:6px;display:flex;flex-direction:column;gap:4px}
+.gname{height:28px;display:flex;align-items:center;justify-content:space-between;padding:0 14px;font-size:11px;font-weight:600;color:#7d8aa3}
+.gname .mono{font-weight:400;color:#98989d}
+.card{display:flex;flex-direction:column;gap:7px;padding:12px 14px;border-radius:6px;text-align:left;width:100%;box-sizing:border-box;background:rgba(48,48,51,0);transition:background-color 150ms ease-out,box-shadow 150ms ease-out}
+.card:hover{background:rgba(48,48,51,.6)}
+.card.sel{background:#303033;box-shadow:inset 0 1px 0 rgba(255,255,255,.06),0 2px 8px rgba(0,0,0,.4)}
+.bar{height:3px;border-radius:2px;background:#2c2c2e;overflow:hidden}
+.btn{display:flex;align-items:center;gap:10px;height:40px;padding:0 14px;border-radius:8px;font-size:13px;color:#e5e5e7;background:#222224;text-decoration:none;transition:background-color 120ms,transform 160ms cubic-bezier(.34,1.4,.64,1)}
+.btn:hover{background:#2c2c2e}
+.btn:active{transform:scale(.98)}
+.tab{display:flex;align-items:center;gap:8px;height:34px;padding:0 16px;border-radius:8px;font-size:13px;color:#98989d;transition:background-color 120ms,color 120ms}
+.tab:hover{background:#222224;color:#e5e5e7}
+.tab.on{background:#222224;color:#f5f5f7;box-shadow:inset 0 1px 0 rgba(255,255,255,.06)}
+.pill{display:inline-flex;align-items:center;gap:8px;height:32px;padding:0 14px;border-radius:16px;background:#1c1c1f;font-size:13px;color:#98989d;transition:background-color 120ms,color 120ms;align-self:flex-start}
+.pill:hover{background:#242427;color:#e5e5e7}
+.chev{transition:transform 220ms cubic-bezier(.34,1.4,.64,1)}
+.pill.open .chev{transform:rotate(90deg)}
+.rev{display:grid;grid-template-rows:0fr;opacity:0;transition:grid-template-rows 260ms ease-out,opacity 200ms}
+.rev.open{grid-template-rows:1fr;opacity:1}
+.rev>div{overflow:hidden;min-height:0}
+.result{background:#1a1a1d;border-radius:16px;padding:20px 22px;display:flex;flex-direction:column;gap:16px;box-shadow:inset 0 1px 0 rgba(255,255,255,.06)}
+.choice{flex:1;display:flex;align-items:center;gap:12px;height:52px;padding:0 16px;border-radius:12px;background:#1a1a1d;text-align:left;box-shadow:inset 0 1px 0 rgba(255,255,255,.05);transition:background-color 120ms,transform 200ms cubic-bezier(.34,1.4,.64,1),box-shadow 150ms}
+.choice:hover{background:#232326;transform:translateY(-1px);box-shadow:inset 0 1px 0 rgba(255,255,255,.06),0 6px 16px rgba(0,0,0,.35)}
+.choice:active{transform:scale(.98)}
+.choice.rec{box-shadow:inset 0 0 0 1.5px rgba(108,180,255,.55)}
+.chip{display:inline-flex;align-items:center;gap:6px;height:28px;padding:0 12px;border-radius:14px;background:#1c1c1f;font-size:12px;color:#c7c7cc;transition:background-color 120ms}
+.chip:hover{background:#242427}
+.rrow{display:flex;align-items:center;gap:10px;min-height:30px;padding:0 14px;font-size:13px;color:#e5e5e7}
+.fade{animation:in 340ms cubic-bezier(.2,.9,.3,1.1) both}
+@keyframes in{from{opacity:0;transform:translateY(6px)}}
+.iconbtn{width:34px;height:34px;border-radius:8px;display:flex;align-items:center;justify-content:center;color:#98989d;transition:background-color 120ms,color 120ms}
+.iconbtn:hover{background:#222224;color:#e5e5e7}
+.cardbtn{display:flex;flex-direction:column;gap:7px;width:100%;text-align:left}
+.card .rev{margin-top:0}
+.xwrap{border-radius:6px;transition:background-color 120ms}
+.xwrap:hover{background:rgba(48,48,51,.45)}
+.xwrap.open{background:#2a2a2d}
+.xrow{display:flex;align-items:center;gap:10px;height:34px;padding:0 14px;width:100%;box-sizing:border-box;font-size:13px;color:#e5e5e7;text-align:left}
+.xwrap.open .chev,.wk.open .chev{transform:rotate(90deg)}
+.act{height:28px;padding:0 11px;border-radius:7px;background:#2c2c2e;font-size:12px;color:#e5e5e7;transition:background-color 120ms,transform 160ms cubic-bezier(.34,1.4,.64,1)}
+.act:hover{background:#38383b}
+.act:active{transform:scale(.96)}
+.act.pri{background:#0a84ff;color:#fff;box-shadow:inset 0 1px 0 rgba(255,255,255,.18)}
+.act.warn{color:#ff8078}
+.erow{display:flex;align-items:center;gap:10px;height:34px;padding:0 14px;border-radius:8px;width:100%;box-sizing:border-box;font-size:13px;text-align:left;transition:background-color 120ms}
+.erow:hover{background:#1c1c1f}
+.pm{display:flex;gap:2px}.pm i{display:block;width:5px;height:10px;border-radius:1.5px}
+</style>
+</helmet>
+<div class="hg" style="width:1440px;height:900px;box-sizing:border-box;background:#0e0e10;color:#e5e5e7;display:flex;gap:8px;padding:8px;overflow:hidden">
+
+  <aside style="width:296px;flex:none;background:#18181a;border-radius:12px;box-shadow:inset 0 1px 0 rgba(255,255,255,.06);display:flex;flex-direction:column;padding:16px 12px 12px;box-sizing:border-box;gap:12px">
+    <a href="Command.dc.html" class="btn" style="color:#f5f5f7">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#98989d" stroke-width="1.7" stroke-linejoin="round" aria-hidden="true"><rect x="4" y="4" width="7" height="7" rx="2"></rect><rect x="13" y="4" width="7" height="7" rx="2"></rect><rect x="4" y="13" width="7" height="7" rx="2"></rect><rect x="13" y="13" width="7" height="7" rx="2"></rect></svg>
+      <span style="flex:1;font-weight:500">Command center</span>
+      <span class="mono" style="display:inline-flex;align-items:center;height:20px;padding:0 8px;border-radius:10px;background:rgba(255,204,102,.14);color:#ffcc66;font-size:11px">2 need you</span>
+    </a>
+    <a href="CommandBar.dc.html" class="btn" style="color:#98989d">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="6.5"></circle><path d="m16 16 4 4"></path></svg>
+      <span style="flex:1">Search or run</span><span style="display:flex;gap:3px"><span class="kc mono">ctrl</span><span class="kc mono">space</span></span>
+    </a>
+
+    <div class="scroller" style="flex:1;min-height:0;overflow:auto;display:flex;flex-direction:column;gap:10px">
+      <sc-for list="{{groups}}" as="g" hint-placeholder-count="3">
+        <section class="grp">
+          <div class="gname"><span>{{g.name}}</span><span class="mono">{{g.count}}</span></div>
+          <sc-for list="{{g.items}}" as="s" hint-placeholder-count="2">
+            <div class="{{s.cls}}">
+            <button class="cardbtn" onClick="{{s.pick}}">
+              <div style="display:flex;align-items:center;gap:8px;width:100%">
+                <span class="{{s.dot}}"></span>
+                <span style="flex:1;font-size:13px;font-weight:500;color:#e5e5e7;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{s.title}}</span>
+                <span class="mono" style="{{s.stStyle}}">{{s.stText}}</span>
+              </div>
+              <div style="padding-left:16px;display:flex;align-items:center;gap:8px;width:100%;box-sizing:border-box">
+                <span class="kind">{{s.kind}}</span>
+                <div class="bar" style="flex:1"><div style="{{s.barStyle}}"></div></div>
+                <span class="mono meta">{{s.time}}</span>
+              </div>
+            </button>
+            <div class="{{s.rev}}"><div>
+              <div style="padding:2px 0 2px 16px;display:flex;flex-direction:column;gap:10px">
+                <div style="font-size:12px;line-height:1.45;color:#c7c7cc">{{s.last}}</div>
+                <div style="display:flex;gap:6px;flex-wrap:wrap"><sc-for list="{{s.actions}}" as="a" hint-placeholder-count="3"><button class="{{a.cls}}" onClick="{{a.run}}">{{a.label}}</button></sc-for></div>
+              </div>
+            </div></div>
+            </div>
+          </sc-for>
+        </section>
+      </sc-for>
+    </div>
+
+    <div class="{{weekWrap}}" style="border-radius:8px;background:#222224">
+      <button class="cardbtn" style="padding:10px 14px;gap:6px" onClick="{{toggleWeek}}">
+        <div style="display:flex;justify-content:space-between;font-size:12px;width:100%"><span>Weekly limit</span><span class="mono meta">41 % · resets Monday</span></div>
+        <div class="bar" style="width:100%"><div style="width:41%;height:100%;background:#0a84ff"></div></div>
+      </button>
+      <div class="{{weekRev}}"><div><div style="padding:0 14px 12px;display:flex;flex-direction:column;gap:8px;font-size:12px;color:#98989d">
+        <div>At this pace it lasts until Sunday.</div>
+        <div style="display:flex;justify-content:space-between"><span>Split view</span><span class="mono">9 %</span></div>
+        <div style="display:flex;justify-content:space-between"><span>Release 0.2.6 notes</span><span class="mono">6 %</span></div>
+        <div style="display:flex;justify-content:space-between"><span>Fix Vercel POST hang</span><span class="mono">3 %</span></div>
+        <div style="display:flex;gap:6px;margin-top:2px"><button class="act" onClick="{{noop}}">Move 2 agents to Sonnet</button></div>
+      </div></div></div>
+    </div>
+    <div style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px">
+      <button class="btn" style="justify-content:center"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"></path></svg>New session</button>
+      <a href="Restore.dc.html" class="btn" style="justify-content:center"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#98989d" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 12a8 8 0 1 0 2.3-5.6M4 4v5h5"></path></svg>Closed · 7</a>
+    </div>
+  </aside>
+
+  <main style="flex:1;min-width:0;display:flex;flex-direction:column;gap:8px">
+    <div style="height:50px;flex:none;display:flex;align-items:center;gap:6px;padding:0 8px;background:#18181a;border-radius:12px;box-shadow:inset 0 1px 0 rgba(255,255,255,.06)">
+      <button class="tab on"><span class="dot d-done"></span>Fix Vercel POST hang</button>
+      <button class="tab"><span class="dot d-working" style="animation:none"></span>dev server</button>
+      <button class="tab">nvim</button>
+      <button class="tab" aria-label="New tab"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"></path></svg></button>
+      <div style="flex:1"></div>
+      <button class="iconbtn" aria-label="Show the terminal"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m5 8 4 4-4 4M12 16h7"></path></svg></button>
+      <button class="iconbtn" aria-label="Split right"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><rect x="4" y="5" width="16" height="14" rx="2.5"></rect><path d="M12 5v14"></path></svg></button>
+    </div>
+
+    <div style="flex:1;min-height:0;display:flex;gap:8px">
+      <section style="flex:1;min-width:0;background:#141416;border-radius:12px;display:flex;flex-direction:column;overflow:hidden">
+        <div class="scroller" style="flex:1;min-height:0;overflow:auto;display:flex;justify-content:center">
+          <div style="width:100%;max-width:700px;padding:28px 32px 24px;box-sizing:border-box;display:flex;flex-direction:column;gap:20px">
+
+            <div style="display:flex;flex-direction:column;gap:4px">
+              <sc-for list="{{earlier}}" as="e" hint-placeholder-count="2">
+                <div>
+                  <button class="erow" onClick="{{e.toggle}}"><span style="color:#7fd48f">✓</span><span style="color:#e5e5e7">{{e.title}}</span><span style="color:#636366">{{e.meta}}</span><div style="flex:1"></div><span class="mono meta">{{e.time}}</span></button>
+                  <div class="{{e.rev}}"><div><div style="padding:4px 14px 10px 36px;font-size:13px;line-height:1.5;color:#98989d">{{e.detail}}</div></div></div>
+                </div>
+              </sc-for>
+            </div>
+
+            <div style="align-self:flex-end;max-width:440px;background:#202023;border-radius:16px 16px 6px 16px;padding:10px 14px;font-size:14px;line-height:1.45;color:#e5e5e7">Fix it with the smallest change.</div>
+
+            <button class="{{planCls}}" onClick="{{togglePlan}}"><svg class="chev" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9 6 6 6-6 6"></path></svg>Changed route.ts, ran 14 tests, tested the preview</button>
+            <div class="{{planRev}}" style="margin-top:-12px"><div><div class="mono" style="display:flex;flex-direction:column;gap:6px;padding:4px 16px;font-size:12.5px;color:#98989d">
+              <span>Update app/api/feedback/route.ts</span><span>pnpm test · 14 passed</span><span>pnpm smoke:post · 200 in 88 ms</span>
+            </div></div></div>
+
+            <div class="result">
+              <div style="display:flex;align-items:center;gap:12px">
+                <span style="width:26px;height:26px;border-radius:13px;background:#7fd48f;display:flex;align-items:center;justify-content:center;flex:none"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#0e0e10" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m5 12 5 5 9-10"></path></svg></span>
+                <span style="font-size:17px;font-weight:600;color:#f5f5f7;flex:1">The form works again</span>
+                <span class="mono" style="font-size:12px;color:#7fd48f">88 ms</span>
+              </div>
+              <div style="display:flex;gap:16px;align-items:stretch">
+                <div style="width:220px;flex:none;border-radius:10px;background:#f4f4f2;padding:14px;display:flex;flex-direction:column;gap:8px" role="img" aria-label="Screenshot: the feedback form after sending">
+                  <div style="height:7px;width:40%;background:#1b1b1b;border-radius:2px"></div>
+                  <div style="height:20px;background:#e4e4e1;border-radius:4px"></div>
+                  <div style="height:34px;background:#e4e4e1;border-radius:4px"></div>
+                  <div style="display:flex;align-items:center;gap:6px"><div style="height:18px;width:56px;background:#1b1b1b;border-radius:4px"></div><span style="font-size:10px;color:#1f7a35">✓ sent</span></div>
+                </div>
+                <div style="flex:1;display:flex;flex-direction:column;gap:10px;justify-content:center">
+                  <div style="font-size:14px;line-height:1.5;color:#c7c7cc">It now reads the message before it replies.</div>
+                  <div style="display:flex;gap:18px">
+                    <div style="display:flex;flex-direction:column;gap:2px"><span class="meta">Before</span><span class="mono" style="font-size:15px;color:#ff8078">timeout</span></div>
+                    <div style="display:flex;flex-direction:column;gap:2px"><span class="meta">After</span><span class="mono" style="font-size:15px;color:#7fd48f">88 ms</span></div>
+                    <div style="display:flex;flex-direction:column;gap:2px"><span class="meta">Tests</span><span class="mono" style="font-size:15px;color:#e5e5e7">14/14</span></div>
+                  </div>
+                  <div style="display:flex;gap:6px;flex-wrap:wrap">
+                    <button class="chip" onClick="{{toggleChg}}"><span class="mono">route.ts</span><span class="pm"><i style="background:#7fd48f"></i><i style="background:#7fd48f"></i><i style="background:#ff8078"></i></span></button>
+                    <button class="chip" onClick="{{toggleWhy}}">Why it hung</button>
+                  </div>
+                </div>
+              </div>
+              <div class="{{whyRev}}"><div><div style="font-size:13px;line-height:1.55;color:#c7c7cc">It replied before it read the message, so on Vercel the message was never read.</div></div></div>
+              <div class="{{chgRev}}"><div><div class="mono" style="border-radius:8px;overflow:hidden;font-size:12px">
+                <div style="background:#2a1d1e;color:#ffb3ad;padding:3px 12px">- const stream = startStream(); const body = await req.json();</div>
+                <div style="background:#1b2a1f;color:#a8e6b4;padding:3px 12px">+ const body = await req.json();</div>
+                <div style="background:#1b2a1f;color:#a8e6b4;padding:3px 12px">+ const stream = startStream(body);</div>
+              </div></div></div>
+            </div>
+
+            <sc-if value="{{asking}}" hint-placeholder-val="{{true}}">
+              <div class="fade" style="display:flex;flex-direction:column;gap:10px">
+                <div style="font-size:15px;font-weight:600;color:#f5f5f7">Put it live?</div>
+                <div style="display:flex;gap:10px">
+                  <sc-for list="{{choices}}" as="c" hint-placeholder-count="3">
+                    <button class="{{c.cls}}" onClick="{{c.pick}}"><span class="kc mono">{{c.n}}</span><span style="flex:1;font-size:14px;font-weight:500;color:#f5f5f7">{{c.label}}</span><span style="font-size:11px;color:#6cb4ff">{{c.tag}}</span></button>
+                  </sc-for>
+                </div>
+              </div>
+            </sc-if>
+            <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap"><span class="meta" style="font-size:12px">Next</span><button class="chip" onClick="{{noop}}">Fix /api/contact too</button><button class="chip" onClick="{{noop}}">Add a test for this</button><button class="chip" onClick="{{noop}}">Write a handoff</button></div>
+            <sc-if value="{{working}}" hint-placeholder-val="{{false}}"><div class="fade" style="display:flex;align-items:center;gap:12px;font-size:14px"><span class="dot d-working"></span>{{workingText}}</div></sc-if>
+            <sc-if value="{{doneLive}}" hint-placeholder-val="{{false}}"><div class="fade" style="display:flex;align-items:center;gap:12px;font-size:14px;color:#f5f5f7"><span class="dot d-done"></span>{{doneText}}</div></sc-if>
+          </div>
+        </div>
+
+        <div style="flex:none;padding:0 32px 18px;display:flex;justify-content:center">
+          <div style="width:100%;max-width:700px;display:flex;flex-direction:column;gap:8px">
+            <div style="display:flex;gap:6px">
+              <span class="chip"><span style="color:#7fd48f">✓</span>Handoff ready</span>
+              <span class="chip"><span class="mono" style="color:#6cb4ff">2</span>queued prompts</span>
+              <div style="flex:1"></div>
+              <span class="mono meta" style="align-self:center">Opus 5.5 · context 62 % · session 34 %</span>
+            </div>
+            <div style="height:50px;border-radius:14px;background:#1c1c1f;box-shadow:inset 0 1px 0 rgba(255,255,255,.05),0 8px 24px rgba(0,0,0,.3);display:flex;align-items:center;gap:12px;padding:0 10px 0 18px">
+              <span style="flex:1;font-size:14px;color:#636366">Message Claude</span>
+              <span class="kc mono">/</span>
+              <span style="width:32px;height:32px;border-radius:9px;background:#2c2c2e;display:flex;align-items:center;justify-content:center"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#98989d" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 19V5M6 11l6-6 6 6"></path></svg></span>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <aside class="scroller" style="width:300px;flex:none;background:#18181a;border-radius:12px;box-shadow:inset 0 1px 0 rgba(255,255,255,.06);padding:16px 12px;box-sizing:border-box;display:flex;flex-direction:column;gap:10px;overflow:auto">
+        <div style="display:flex;align-items:center;justify-content:space-between;padding:0 4px 4px"><span style="font-size:15px;font-weight:600;color:#f5f5f7">Session</span><span class="kind">Agent · Opus</span></div>
+        <sc-for list="{{rail}}" as="g" hint-placeholder-count="4">
+          <div class="grp">
+            <div class="gname"><span>{{g.name}}</span><span class="mono">{{g.meta}}</span></div>
+            <sc-for list="{{g.rows}}" as="r" hint-placeholder-count="3">
+              <div class="{{r.wrap}}">
+                <button class="xrow" onClick="{{r.toggle}}">
+                  <span class="{{r.dot}}"></span>
+                  <span style="flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{r.label}}</span>
+                  <span class="mono" style="{{r.valStyle}}">{{r.val}}</span>
+                  <svg class="chev" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#636366" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9 6 6 6-6 6"></path></svg>
+                </button>
+                <sc-if value="{{r.hasBar}}" hint-placeholder-val="{{false}}"><div style="padding:0 14px 8px"><div class="bar"><div style="{{r.barStyle}}"></div></div></div></sc-if>
+                <div class="{{r.rev}}"><div>
+                  <div style="padding:2px 14px 12px 32px;display:flex;flex-direction:column;gap:10px">
+                    <div style="font-size:12px;line-height:1.5;color:#98989d;white-space:pre-line">{{r.detail}}</div>
+                    <div style="display:flex;gap:6px;flex-wrap:wrap">
+                      <sc-for list="{{r.actions}}" as="a" hint-placeholder-count="2"><button class="{{a.cls}}" onClick="{{a.run}}">{{a.label}}</button></sc-for>
+                    </div>
+                  </div>
+                </div></div>
+              </div>
+            </sc-for>
+          </div>
+        </sc-for>
+      </aside>
+    </div>
+  </main>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1440,"height":900}}'>
+class Component extends DCLogic {
+  constructor(p) { super(p); this.state = { sel: 'a', plan: false, why: false, chg: false, choice: null, phase: 'ask', x: {}, week: false, done: {} }; }
+  componentWillUnmount() { clearTimeout(this._t); }
+  renderVals() {
+    const st = this.state;
+    const ST = { needs: ['needs you', '#ffcc66'], working: ['working', '#6cb4ff'], done: ['done', '#7fd48f'], idle: ['ready', '#98989d'], failed: ['failed', '#ff8078'] };
+    const D = [
+      ['acme-site', [['a', 'Fix Vercel POST hang', 'done', 'Agent · Opus', '12m', 62, 'The form works again. Asks: put it live?', ['Send a prompt', 'Rename', 'Stop']], ['d', 'Preview of the POST fix', 'working', 'Deploy', '40s', 45, 'Installing packages · 45 %', ['Open in browser', 'Cancel']]]],
+      ['Canvas', [['b', 'Release 0.2.6 notes', 'needs', 'Agent · Opus', '31m', 74, 'Wants to run: git push origin release/0.2.6', ['Approve', 'Deny', 'Open']], ['g', 'Checks for feat/split-view', 'failed', 'GitHub CI', '3m', 60, 'Failed: export-svg test', ['Ask Claude to fix it', 'Open on GitHub']], ['c', 'Split view', 'working', 'Agent · Sonnet', '1h', 88, 'Running test 9 of 14 · context near full', ['Write a handoff', 'Send a prompt']]]],
+      ['Dashboard', [['e', 'Dashboard auth fix', 'idle', 'Agent · Opus', '2h', 35, 'Waiting for your next prompt', ['Send a prompt', 'Close']]]]
+    ];
+    const groups = D.map(([name, rows]) => ({
+      name, count: String(rows.length),
+      items: rows.map(([id, title, s, kind, time, pct, last, acts]) => ({
+        title, kind, time, last,
+        rev: 'rev' + (st.sel === id ? ' open' : ''),
+        actions: acts.map((label, i) => ({ label, cls: 'act' + (i === 0 && (s === 'needs' || s === 'failed') ? ' pri' : '') + (/Stop|Deny|Cancel/.test(label) ? ' warn' : ''), run: () => {} })),
+        cls: 'card' + (st.sel === id ? ' sel' : ''),
+        dot: 'dot d-' + s,
+        stText: ST[s][0], stStyle: 'font-size:11px;color:' + ST[s][1],
+        barStyle: 'height:100%;width:' + pct + '%;background:' + (s === 'failed' ? '#ff8078' : pct >= 80 ? '#ffcc66' : '#0a84ff'),
+        pick: () => this.setState({ sel: id })
+      }))
+    }));
+    const pill = (k) => 'pill' + (st[k] ? ' open' : '');
+    const rev = (k) => 'rev' + (st[k] ? ' open' : '');
+    const tg = (k) => () => this.setState({ [k]: !this.state[k] });
+    const C = [['1', 'Put it live', 'suggested'], ['2', 'Keep on preview', ''], ['3', 'Also fix /contact', '']];
+    const choices = C.map(([n, label, tag]) => ({
+      n, label, tag, cls: 'choice' + (tag ? ' rec' : ''),
+      pick: () => {
+        this.setState({ choice: n, phase: 'work' });
+        clearTimeout(this._t);
+        this._t = setTimeout(() => this.setState({ phase: 'done' }), 1800);
+      }
+    }));
+    const W = { '1': ['Putting it live…', 'Live on acme-site'], '2': ['Keeping it on preview…', 'Stays on the preview site'], '3': ['Fixing /contact…', 'Both forms work'] };
+    const w = st.choice ? W[st.choice] : ['', ''];
+    const X = st.x;
+    const tx = (k) => () => this.setState({ x: { ...this.state.x, [k]: !this.state.x[k] } });
+    const R = (k, dot, label, val, valColor, detail, acts, bar) => ({
+      dot: 'dot ' + dot, label, val, detail,
+      valStyle: 'font-size:11px;color:' + (valColor || '#98989d'),
+      wrap: 'xwrap' + (X[k] ? ' open' : ''), rev: 'rev' + (X[k] ? ' open' : ''), toggle: tx(k),
+      hasBar: bar != null, barStyle: bar != null ? 'height:100%;width:' + bar + '%;background:#0a84ff' : '',
+      actions: acts.map(([l, kind]) => ({ label: l, cls: 'act' + (kind ? ' ' + kind : ''), run: () => {} }))
+    });
+    const rail = [
+      { name: 'Plan', meta: '4 of 4', rows: [
+        R('p1', 'd-done', 'Read the form code', '20 s', '', 'Read app/api/feedback/route.ts and next.config.js.', [['Show in chat']]),
+        R('p2', 'd-done', 'Find the cause', '1 min', '', 'It replied before it read the message.', [['Show in chat']]),
+        R('p3', 'd-done', 'Fix it', '30 s', '', 'route.ts: 2 lines added, 1 removed.', [['Show changes'], ['Undo this change', 'warn']]),
+        R('p4', 'd-done', 'Test on preview', '2 min', '#7fd48f', '14 tests pass. The preview answers in 88 ms.', [['Run again']])
+      ] },
+      { name: 'Limits', meta: '', rows: [
+        R('l1', 'd-idle', 'Context used', '62 %', '', 'About 40 % is left. A handoff is suggested at 80 %.', [['Write a handoff now'], ['Compact']], 62),
+        R('l2', 'd-idle', 'Session limit', '34 %', '', 'Resets at 4:10 PM. At 90 % agents pause after a handoff.', [['Pause until reset']], 34)
+      ] },
+      { name: 'Automations', meta: '', rows: [
+        R('a1', 'd-idle', 'Auto-handoff', 'in 48 min', '', 'Writes a handoff after 50 min idle. Last: yesterday 6:02 PM.', [['Run now'], ['Pause']]),
+        R('a2', 'd-done', 'Heartbeat', 'on', '', 'Keeps the prompt cache warm while you are away. Next beat in 31 min.', [['Pause']]),
+        R('a3', 'd-done', 'Remote Control', 'on', '', 'You can send prompts to this session from the Claude app.', [['Turn off', 'warn']])
+      ] },
+      { name: 'Nearby', meta: '', rows: [
+        R('n1', 'd-working', 'dev server', 'running', '#7fd48f', 'POST /api/feedback 200 in 88 ms\nCompiled in 412 ms', [['Open the site'], ['Restart']]),
+        R('n2', 'd-idle', 'main', '+2 −1', '', '1 file changed, not committed yet.', [['Show changes'], ['Commit', 'pri']])
+      ] }
+    ];
+    const EA = [['Read the form code', '· 2 steps', '9:41', 'route.ts and next.config.js.'], ['Found the cause', '· 3 steps · 2 min', '9:43', 'It replied before it read the message, so the request waited forever.']];
+    const earlier = EA.map(([title, meta, time, detail], i) => ({ title, meta, time, detail, rev: 'rev' + (X['e' + i] ? ' open' : ''), toggle: tx('e' + i) }));
+    return {
+      rail, earlier,
+      weekWrap: 'wk' + (st.week ? ' open' : ''), weekRev: 'rev' + (st.week ? ' open' : ''), toggleWeek: () => this.setState({ week: !this.state.week }),
+      noop: () => {},
+      groups,
+      planCls: pill('plan'), planRev: rev('plan'), togglePlan: tg('plan'),
+      whyRev: rev('why'), toggleWhy: tg('why'),
+      chgRev: rev('chg'), toggleChg: tg('chg'),
+      asking: st.phase === 'ask', choices,
+      working: st.phase === 'work', workingText: w[0],
+      doneLive: st.phase === 'done', doneText: w[1]
+    };
+  }
+}
+</script>
+</body>
+</html>
