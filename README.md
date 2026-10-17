@@ -4,6 +4,16 @@ A calmer, more graphical way to run many Claude Code agents in [herdr](https://h
 
 **Status: design done, build plan approved.** The build starts in the week of 2026-10-19. This repo holds the design brief, the mockups and a probe mod. See [docs/build-plan.md](docs/build-plan.md).
 
+## Screenshots
+
+Rendered from the mockups with made-up data.
+
+| | |
+|---|---|
+| ![Session view](docs/screenshots/I-hybrid.png) **I · Session view** | ![Command center](docs/screenshots/D-command-center.png) **D · Command center** |
+| ![Start on machines](docs/screenshots/J-start-on-machines.png) **J · Start on several machines** | ![Agents and projects](docs/screenshots/K-agents-and-projects.png) **K · Agents and projects** |
+| ![Closed sessions](docs/screenshots/F-closed-sessions.png) **F · Pick up after a restart** | ![Command bar](docs/screenshots/B-command-bar.png) **B · Command bar** |
+
 ## The idea
 
 herdr is a strong engine, but its interface is a terminal: monospace text, hard lines, and walls of output. herdr-graphite keeps herdr as the engine and adds:
@@ -24,6 +34,7 @@ herdr is a strong engine, but its interface is a terminal: monospace text, hard 
 | [mockups/](mockups/) | The interactive mockups (artboards A–K), with made-up data |
 | [mods/genui-probe/](mods/genui-probe/) | A small Claude Code mod that tests what a mod can draw in a terminal |
 | [scripts/privacy-scan.sh](scripts/privacy-scan.sh) | Checks the repo for private data before a push |
+| [scripts/render-mockups.sh](scripts/render-mockups.sh) | Renders the mockups to PNG with headless Chromium |
 
 The mockups are `.dc.html` files made on a claude.ai Design canvas. They need that canvas to render. [mockups/README.md](mockups/README.md) describes each one.
 
