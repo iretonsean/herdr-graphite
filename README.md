@@ -4,6 +4,10 @@ A calmer, more graphical way to run many Claude Code agents in [herdr](https://h
 
 **Status: a concept.** This repo holds a design brief, clickable mockups and a probe mod. Nothing is built yet. The build plan is ready. See [docs/build-plan.md](docs/build-plan.md).
 
+## Video
+
+A 72-second walkthrough of the clickable mockups, with made-up data: [docs/video/herdr-graphite-concept.mp4](docs/video/herdr-graphite-concept.mp4).
+
 ## Screenshots
 
 Rendered from the mockups with made-up data.
