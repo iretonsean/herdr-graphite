@@ -1,6 +1,6 @@
 # Build plan
 
-**Status: waiting for approval.** Nothing in this plan has started.
+**Status: approved on 2026-10-16. The build starts in the week of 2026-10-19.** Nothing has started yet.
 
 ## Summary
 

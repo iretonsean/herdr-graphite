@@ -2,7 +2,7 @@
 
 A calmer, more graphical way to run many Claude Code agents in [herdr](https://herdr.dev), the terminal workspace manager for coding agents. It uses the Graphite theme for [Omarchy](https://omarchy.org).
 
-**Status: design phase.** This repo holds the design brief, the mockups and a probe mod. Nothing is built yet. See [docs/build-plan.md](docs/build-plan.md).
+**Status: design done, build plan approved.** The build starts in the week of 2026-10-19. This repo holds the design brief, the mockups and a probe mod. See [docs/build-plan.md](docs/build-plan.md).
 
 ## The idea
 
