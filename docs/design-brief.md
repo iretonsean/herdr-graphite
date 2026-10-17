@@ -14,8 +14,9 @@ herdr becomes a **command center for autonomous builds**. It shows what goes on.
 
 ## Architecture
 
-- **herdr stays the engine.** A Graphite layer, drawn in Quickshell with the Graphite components, controls herdr through its socket API.
-- **Claude Code mods** restyle the chat inside the terminal pane, and they send data to herdr with `herdr pane report-metadata`.
+- **herdr stays the engine.** A new Graphite app, built in Quickshell with the Graphite components, is the main window. It controls herdr through its socket API.
+- **The app draws the session view** (artboard I) from Claude Code's session files and from hook data. The real terminal opens with Show terminal.
+- **Claude Code mods** set the Brief behavior and the question rule, and they send data to herdr with `herdr pane report-metadata`.
 - **Ghostty** hosts the panes, with more padding and a softer mono font.
 
 ## Rules
