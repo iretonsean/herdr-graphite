@@ -1,0 +1,7 @@
+singleton Theme Theme.qml
+Dot 1.0 Dot.qml
+Chip 1.0 Chip.qml
+SessionCard 1.0 SessionCard.qml
+Sidebar 1.0 Sidebar.qml
+SessionArea 1.0 SessionArea.qml
+MessageBox 1.0 MessageBox.qml

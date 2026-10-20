@@ -1,0 +1,7 @@
+{"id":"cli:agent:list","result":{"agents":[
+{"agent":"claude","agent_status":"done","cwd":"/work/acme-site","pane_id":"w1:p1","name":"post-hang","terminal_title_stripped":"Fix Vercel POST hang"},
+{"agent":"claude","agent_status":"blocked","cwd":"/work/canvas-app","pane_id":"w1:p2","terminal_title_stripped":"Release 0.4"},
+{"agent":"claude","agent_status":"working","cwd":"/work/canvas-app","pane_id":"w1:p3","name":"dark-mode"},
+{"agent":"claude","agent_status":"working","cwd":"/work/acme-site","pane_id":"w2:p1"},
+{"agent":"claude","agent_status":"idle","cwd":"/work/dotfiles","pane_id":"w2:p2","terminal_title_stripped":"Tidy shell config"}
+],"type":"agent_list"}}

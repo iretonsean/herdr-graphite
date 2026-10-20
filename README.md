@@ -2,7 +2,7 @@
 
 A calmer, more graphical way to run many Claude Code agents in [herdr](https://herdr.dev), the terminal workspace manager for coding agents. It uses the Graphite theme for [Omarchy](https://omarchy.org).
 
-**Status: a concept, with two build steps done (H1 base setup, H2 data feed).** This repo holds a design brief, clickable mockups, a probe mod and the base setup configs. The Graphite app is not built yet. See [docs/build-plan.md](docs/build-plan.md).
+**Status: a concept, with three build steps done (H1 base setup, H2 data feed, H3a app base).** This repo holds a design brief, clickable mockups, a probe mod, the base setup configs and a first preview of the Graphite app (sidebar, session cards, message box). See [docs/build-plan.md](docs/build-plan.md).
 
 ## Video
 
@@ -100,6 +100,37 @@ herdr drops the fields when the session ends (the plugin clears them), or when t
 
 **Tests.** `scripts/test-mods.sh` runs `claude plugin validate`, `claude plugin test` (sample JSON for each hook) and `scripts/test-feed.sh`. The last one runs the real Claude Code inside a throwaway herdr, with a temporary config and a fake API, and checks what `herdr pane get` shows. A sample run: [docs/test-logs/H2-feed.log](docs/test-logs/H2-feed.log).
 
+## Graphite app (preview)
+
+H3a is the first part of the Graphite app: a Quickshell window with the v2 sidebar. It is a preview. It is useful today, but the session view is not built yet (H3b).
+
+| v2 prototype (left column) | The app (demo data) |
+|---|---|
+| ![v2 prototype](docs/screenshots/H3a-v2-reference.png) | ![The app](docs/screenshots/H3a-sidebar.png) |
+
+**What works**
+
+- **Sidebar.** Sessions grouped by machine, then project. Each card shows the title, the state (needs you, working, failed, ready, done), the type label ("Agent · Opus"), branch, context use, time and the last line. The top row counts the sessions that need you. A weekly limit card shows at the bottom when a feed file has it. "New session" and "Closed" are placeholders.
+- **Data.** Every 2 seconds the app reads `herdr agent list` and the [feed files](#data-feed), without waiting (no call blocks the window). A session with no feed file still shows, with the terminal title and the folder name. Only this machine shows for now.
+- **Select and focus.** Click a card to select it. Double click it to focus that pane in herdr (`herdr agent focus`).
+- **Session area.** For the selected card: title, state, plan steps and the last line. The full session view is the next step.
+- **Message box.** Type at the bottom of the session area. Enter sends the text to the selected session with `herdr agent prompt <name> <text>`. Shift+Enter makes a new line. The line above the box says "Sent", or shows herdr's answer when it refuses (for example when the agent waits for a decision).
+- **Motion.** Hover and selection change in 120 to 180 ms. Cards slide to their place when the order changes.
+
+**Safety.** The app only reads from herdr, and sends two commands: `agent focus` and `agent prompt`. It never starts, stops or configures herdr. Closing the window (Ctrl+W, or the close button of your window manager) ends only the app.
+
+**Run**
+
+```
+quickshell -p app/shell.qml
+scripts/install-app.sh            # adds "Herdr Graphite" to your launcher (a desktop entry, started with setsid uwsm-app)
+scripts/install-app.sh --uninstall
+```
+
+**Tests.** `scripts/test-app.sh` tests the data join with sample `herdr agent list` JSON and sample feed files. `scripts/test-app-install.sh` tests the installer in a temporary folder. `scripts/test-app-ui.sh` runs the app in a headless Weston against a throwaway herdr: select, focus, send, Shift+Enter, a refused prompt, close. `scripts/render-app-shots.sh` draws the picture above. None of them opens a window on your desktop or touches your herdr. The UI test and the picture need a Weston module that adds a keyboard and pointer (`SYNTH_SO=/path/to/synth-input.so`), because Qt draws no frame in a headless Weston without a seat.
+
+**Not yet.** The session view (turns, result cards, choices that answer a dialog), the Pinned group and the State grouping, tabs, the command bar, the Command center, the Closed sessions menu, other machines, a theme read from your Omarchy colours (the tokens are fixed Graphite values in `app/Theme.qml`).
+
 ## The idea
 
 herdr is a strong engine, but its interface is a terminal: monospace text, hard lines, and walls of output. herdr-graphite keeps herdr as the engine and adds:
@@ -125,6 +156,8 @@ herdr is a strong engine, but its interface is a terminal: monospace text, hard 
 | [scripts/privacy-scan.sh](scripts/privacy-scan.sh) | Checks the repo for private data before a push |
 | [scripts/render-mockups.sh](scripts/render-mockups.sh) | Renders the mockups to PNG with headless Chromium |
 | [scripts/test-mods.sh](scripts/test-mods.sh) | Tests the plugin (unit tests and an end-to-end run in a throwaway herdr) |
+| [app/](app/) | The Graphite app (Quickshell): `shell.qml`, the join in `join.js`, the tokens in `Theme.qml` |
+| [scripts/install-app.sh](scripts/install-app.sh) | Adds the app to your launcher. `--uninstall` removes it. |
 | [scripts/render-base-shots.sh](scripts/render-base-shots.sh) | Renders the base setup before and after pictures in headless Weston |
 
 The mockups are `.dc.html` files made on a claude.ai Design canvas. They need that canvas to render. [mockups/README.md](mockups/README.md) describes each one.
