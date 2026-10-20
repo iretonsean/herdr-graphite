@@ -8,8 +8,14 @@ import Quickshell.Io
 Rectangle {
   id: root
   property string target: ""
-  property string status: ""
+  // The status line belongs to the session of the last send: it shows only while that session is the target.
+  property string rawStatus: ""
+  property string statusTarget: ""
+  readonly property string status: statusTarget === target ? rawStatus : ""
   property bool failed: false
+  // One draft per session: the text stays with the session it was typed for.
+  property var drafts: ({})
+  property string shown: ""
   property alias text: input.text
   readonly property bool busy: proc.running
 
@@ -17,38 +23,51 @@ Rectangle {
   radius: 10
   color: Theme.surface2
 
+  onTargetChanged: {
+    drafts[shown] = input.text
+    shown = target
+    input.text = drafts[target] || ""
+  }
+
   function send() {
     var text = input.text.trim()
     if (text === "" || root.target === "" || proc.running) return
     root.failed = false
-    root.status = "Sending…"
+    root.statusTarget = root.target
+    root.rawStatus = "Sending…"
+    proc.sentTarget = root.target
+    proc.sentText = text
     proc.command = [Quickshell.env("HERDR_BIN") || "herdr", "agent", "prompt", root.target, text]
     proc.running = true
   }
 
   Process {
     id: proc
+    property string sentTarget: ""
+    property string sentText: ""
     stdout: StdioCollector { id: out }
     stderr: StdioCollector { id: err }
     onExited: function (code) {
       if (code === 0) {
         root.failed = false
-        root.status = "Sent"
-        input.text = ""
+        root.rawStatus = "Sent"
+        // Remove only the text that was sent. Text typed since then, or a draft of another session, stays.
+        if (root.target === proc.sentTarget) { if (input.text.trim() === proc.sentText) input.text = "" }
+        else if ((root.drafts[proc.sentTarget] || "").trim() === proc.sentText) root.drafts[proc.sentTarget] = ""
         clearTimer.restart()
       } else {
         var raw = (err.text || out.text).trim()
         var msg = raw
         try { var j = JSON.parse(raw); msg = (j.error && (j.error.message || j.error.code)) || raw } catch (e) {}
         root.failed = true
-        root.status = msg !== "" ? msg : "herdr failed (exit " + code + ")"
+        root.rawStatus = msg !== "" ? msg : "herdr failed (exit " + code + ")"
       }
     }
   }
-  Timer { id: clearTimer; interval: 3000; onTriggered: if (!root.failed) root.status = "" }
+  Timer { id: clearTimer; interval: 3000; onTriggered: if (!root.failed) root.rawStatus = "" }
 
   Flickable {
-    anchors { fill: parent; margins: 12; rightMargin: 44 }
+    anchors { fill: parent; margins: 12; rightMargin: 44 + (targetLabel.visible ? targetLabel.implicitWidth + 8 : 0) }
     contentHeight: input.implicitHeight
     clip: true
     TextArea.flickable: TextArea {
@@ -68,6 +87,14 @@ Rectangle {
         }
       }
     }
+  }
+  Text {
+    id: targetLabel
+    visible: input.text !== "" && root.target !== ""
+    anchors { right: parent.right; rightMargin: 44; bottom: parent.bottom; bottomMargin: 14 }
+    text: "→ " + root.target
+    color: Theme.text3
+    font.family: Theme.mono; font.pixelSize: 11
   }
   Rectangle {
     anchors { right: parent.right; bottom: parent.bottom; margins: 10 }

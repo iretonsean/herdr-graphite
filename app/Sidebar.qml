@@ -6,6 +6,7 @@ Rectangle {
   id: root
   property var model
   property int needCount: 0
+  property bool herdrUp: true
   property int weeklyPct: -1
   property string weeklyResets: ""
   property string selectedKey: ""
@@ -117,6 +118,14 @@ Rectangle {
         onFocusRequested: { root.picked(del.model.key); root.focusRequested(del.model.target) }
       }
     }
+  }
+
+  Text {
+    visible: !root.herdrUp
+    anchors { horizontalCenter: list.horizontalCenter; top: list.top; topMargin: 72 }
+    text: "herdr is not running"
+    color: Theme.text3
+    font.family: Theme.font; font.pixelSize: 13
   }
 
   // The weekly limit card (from the feed's weekly fields). Hidden when no feed has them.

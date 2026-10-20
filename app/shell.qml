@@ -10,6 +10,7 @@ ShellRoot {
   id: root
   property string selectedKey: ""
   property int needCount: 0
+  property bool herdrUp: true
   property int weeklyPct: -1
   property string weeklyResets: ""
   property string lastJson: ""
@@ -62,6 +63,7 @@ ShellRoot {
     try { input = JSON.parse(text) } catch (e) { return }
     var m = Join.buildModel(input)
     root.needCount = m.needCount
+    root.herdrUp = m.herdrUp
     root.weeklyPct = m.weekly.pct
     root.weeklyResets = m.weekly.resets
     sync(m.rows)
@@ -85,6 +87,28 @@ ShellRoot {
     focusProc.running = true
   }
 
+  // Test hook: with HG_DUMP=<file>, the app writes what it shows (rows, selection, draft, status) as JSON
+  // when it changes. scripts/test-app-ui.sh reads it. Without the variable nothing is written.
+  readonly property string dumpPath: Quickshell.env("HG_DUMP") || ""
+  property string lastDump: ""
+  Process { id: dumpProc }
+  Timer {
+    interval: 300; running: root.dumpPath !== ""; repeat: true
+    onTriggered: {
+      var out = []
+      for (var i = 0; i < rows.count; i++) {
+        var r = rows.get(i)
+        out.push({ key: r.key, kind: r.kind, title: r.title, state: r.state })
+      }
+      var text = JSON.stringify({ rows: out, selected: root.selectedKey, herdrUp: root.herdrUp, status: area.status,
+                                  failed: area.failed, draft: area.draft, need: root.needCount })
+      if (text === root.lastDump || dumpProc.running) return
+      root.lastDump = text
+      dumpProc.command = ["sh", "-c", "printf %s \"$1\" >\"$2.tmp\" && mv \"$2.tmp\" \"$2\"", "sh", text, root.dumpPath]
+      dumpProc.running = true
+    }
+  }
+
   FloatingWindow {
     id: win
     title: "Herdr Graphite"
@@ -106,6 +130,7 @@ ShellRoot {
         anchors { left: parent.left; top: parent.top; bottom: parent.bottom }
         model: rows
         needCount: root.needCount
+        herdrUp: root.herdrUp
         weeklyPct: root.weeklyPct
         weeklyResets: root.weeklyResets
         selectedKey: root.selectedKey
@@ -113,6 +138,7 @@ ShellRoot {
         onFocusRequested: function (target) { root.focusPane(target) }
       }
       SessionArea {
+        id: area
         anchors { left: sidebar.right; right: parent.right; top: parent.top; bottom: parent.bottom; leftMargin: 8 }
         session: root.selected
       }

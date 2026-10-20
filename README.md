@@ -111,7 +111,7 @@ H3a is the first part of the Graphite app: a Quickshell window with the v2 sideb
 **What works**
 
 - **Sidebar.** Sessions grouped by machine, then project. Each card shows the title, the state (needs you, working, failed, ready, done), the type label ("Agent · Opus"), branch, context use, time and the last line. The top row counts the sessions that need you. A weekly limit card shows at the bottom when a feed file has it. "New session" and "Closed" are placeholders.
-- **Data.** Every 2 seconds the app reads `herdr agent list` and the [feed files](#data-feed), without waiting (no call blocks the window). A session with no feed file still shows, with the terminal title and the folder name. Only this machine shows for now.
+- **Data.** Every 2 seconds the app reads `herdr agent list` and the [feed files](#data-feed) of those sessions, without waiting (no call blocks the window). When herdr is not running, the sidebar says so. A session with no feed file still shows, with the terminal title and the folder name. Only this machine shows for now.
 - **Select and focus.** Click a card to select it. Double click it to focus that pane in herdr (`herdr agent focus`).
 - **Session area.** For the selected card: title, state, plan steps and the last line. The full session view is the next step.
 - **Message box.** Type at the bottom of the session area. Enter sends the text to the selected session with `herdr agent prompt <name> <text>`. Shift+Enter makes a new line. The line above the box says "Sent", or shows herdr's answer when it refuses (for example when the agent waits for a decision).
@@ -123,11 +123,11 @@ H3a is the first part of the Graphite app: a Quickshell window with the v2 sideb
 
 ```
 quickshell -p app/shell.qml
-scripts/install-app.sh            # adds "Herdr Graphite" to your launcher (a desktop entry, started with setsid uwsm-app)
+scripts/install-app.sh            # run it in your main checkout, not in a worktree that you may delete. Adds "Herdr Graphite" to your launcher (a desktop entry, started with setsid uwsm-app)
 scripts/install-app.sh --uninstall
 ```
 
-**Tests.** `scripts/test-app.sh` tests the data join with sample `herdr agent list` JSON and sample feed files. `scripts/test-app-install.sh` tests the installer in a temporary folder. `scripts/test-app-ui.sh` runs the app in a headless Weston against a throwaway herdr: select, focus, send, Shift+Enter, a refused prompt, close. `scripts/render-app-shots.sh` draws the picture above. None of them opens a window on your desktop or touches your herdr. The UI test and the picture need a Weston module that adds a keyboard and pointer (`SYNTH_SO=/path/to/synth-input.so`), because Qt draws no frame in a headless Weston without a seat.
+**Tests.** `scripts/test-app.sh` tests the data join with sample `herdr agent list` JSON and sample feed files. `scripts/test-app-install.sh` tests the installer in a temporary folder. `scripts/test-app-ui.sh` runs the app in a headless Weston against a throwaway herdr and reads the app's own state (`HG_DUMP`): cards, select, focus, send, Shift+Enter, one draft per session, send after a reorder, a refused prompt shown in the app, close, herdr stopped. `scripts/render-app-shots.sh` draws the picture above. None of them opens a window on your desktop or touches your herdr. The UI test and the picture need a Weston module that adds a keyboard and pointer (`SYNTH_SO=/path/to/synth-input.so`), because Qt draws no frame in a headless Weston without a seat.
 
 **Not yet.** The session view (turns, result cards, choices that answer a dialog), the Pinned group and the State grouping, tabs, the command bar, the Command center, the Closed sessions menu, other machines, a theme read from your Omarchy colours (the tokens are fixed Graphite values in `app/Theme.qml`).
 

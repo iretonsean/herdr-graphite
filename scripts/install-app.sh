@@ -48,6 +48,12 @@ DESKTOP
 if [ "$mode" = dry ]; then
   echo "would write $file:"; printf '%s\n' "$entry"; exit 0
 fi
+if [ -e "$file" ] && ! grep -q '^X-Herdr-Graphite=1$' "$file"; then
+  echo "not installed: $file exists and was not made by this script (move it away first)" >&2; exit 1
+fi
+if [ "$(git -C "$root" rev-parse --git-dir)" != "$(git -C "$root" rev-parse --git-common-dir)" ]; then
+  echo "note: $root is a git worktree. The entry breaks when the worktree is removed. Install from the main checkout." >&2
+fi
 mkdir -p "$(dirname "$file")"
 printf '%s\n' "$entry" >"$file.tmp" && mv "$file.tmp" "$file"
 echo "installed $file"

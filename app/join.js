@@ -81,8 +81,8 @@ function weekly(feeds) {
   return { pct: Math.round(best.weekly), resets: r }
 }
 
-// input: { host, now (epoch s), agents: [agent list entries], feed: { <sanitized pane id>: feed json } }
-// output: { host, needCount, total, weekly, rows: [flat rows: machine, project, session] }
+// input: { host, now (epoch s), herdrUp (false when herdr does not answer), agents: [agent list entries], feed: { <sanitized pane id>: feed json } }
+// output: { host, herdrUp, needCount, total, weekly, rows: [flat rows: machine, project, session] }
 function buildModel(input) {
   var host = input.host || 'this machine'
   var now = input.now || Math.floor(Date.now() / 1000)
@@ -107,6 +107,7 @@ function buildModel(input) {
   })
   return {
     host: host,
+    herdrUp: input.herdrUp !== false,
     needCount: cards.filter(function (c) { return c.state === 'needs' }).length,
     total: cards.length,
     weekly: weekly(feeds),

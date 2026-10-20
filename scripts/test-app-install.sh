@@ -23,6 +23,9 @@ run --uninstall >/dev/null; [ ! -e "$f" ] && ok "--uninstall removes the entry" 
 run --uninstall >/dev/null && ok "--uninstall twice is fine" || bad "--uninstall twice"
 mkdir -p "$t/data/applications"; echo "[Desktop Entry]" >"$f"
 run --uninstall >/dev/null 2>&1 && bad "a foreign file is kept" || { [ -f "$f" ] && ok "a file not made by the script is kept" || bad "a foreign file is kept"; }
+# An existing entry without the marker is not overwritten.
+echo "[Desktop Entry]" >"$f"
+run >/dev/null 2>&1 && bad "install keeps a foreign entry" || { grep -q Herdr "$f" && bad "install keeps a foreign entry" || ok "install does not overwrite a foreign entry"; }
 # A path with a space and a quote.
 rm -f "$f"; mkdir -p "$t/my repo/app" "$t/my repo/scripts"; cp "$root/scripts/install-app.sh" "$t/my repo/scripts/"; touch "$t/my repo/app/shell.qml"
 git -C "$t/my repo" init -q

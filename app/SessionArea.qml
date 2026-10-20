@@ -6,6 +6,8 @@ Rectangle {
   id: root
   property var session: null
   property alias status: box.status
+  property alias failed: box.failed
+  property alias draft: box.text
   radius: 12
   color: Theme.surface1
 

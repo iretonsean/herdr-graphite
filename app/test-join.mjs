@@ -66,4 +66,7 @@ t('a feed file with wrong types does not crash', () => {
   const bad = buildModel({ host: 'h', now: NOW, agents: [agents[0]], feed: { w1_p1: { state: 5, title: 7, plan: 'x', context: 'a' } } })
   assert.equal(bad.rows.filter(r => r.kind === 'session').length, 1)
 })
+t('herdr up by default; herdrUp false is passed on', () => {
+  assert.equal(m.herdrUp, true); assert.equal(buildModel({ host: 'h', herdrUp: false, agents: [], feed: {} }).herdrUp, false)
+})
 console.log(`${n} data-join checks passed`)

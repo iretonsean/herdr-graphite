@@ -1,9 +1,11 @@
 #!/usr/bin/env bash
 # UI test of the Graphite app against a THROWAWAY herdr, in a headless Weston. It checks:
-#   - the cards come from `herdr agent list` and the feed files
+#   - the cards come from `herdr agent list` and the feed files (read from the app's own state dump, HG_DUMP)
 #   - a click selects a card; a double click focuses that pane in herdr
 #   - the message box: Enter sends the text with `herdr agent prompt`; Shift+Enter makes a new line (no send)
-#   - the error path: a prompt to an agent that waits for a decision shows herdr's error
+#   - a draft stays with its session; a prompt goes to the selected session also after the list reorders
+#   - the error path: a prompt to an agent that waits for a decision shows herdr's error in the app
+#   - herdr stopped: the sidebar says so
 #   - closing the window ends only the app; the throwaway herdr keeps running
 # Nothing of yours is used: own herdr server and socket, own HOME, own feed folder, own Weston. Your herdr is not touched.
 # Usage: scripts/test-app-ui.sh [SHOTS_DIR]     SHOTS_DIR gets a picture after each step (look at them by hand).
@@ -90,53 +92,100 @@ env -u WAYLAND_DISPLAY -u DISPLAY weston --modules="$synth" --backend=headless -
   --width=1100 --height=700 --scale=2 --idle-time=0 --shell=kiosk --debug --log="$work/weston.log" >/dev/null 2>&1 &
 wpid=$!
 for _ in $(seq 100); do [ -S "$XDG_RUNTIME_DIR/$wsock" ] && break; sleep 0.1; done
-env -i PATH="$PATH" HOME="$home" XDG_RUNTIME_DIR="$XDG_RUNTIME_DIR" XDG_STATE_HOME="$home/.local/state" \
-  WAYLAND_DISPLAY="$wsock" QT_QPA_PLATFORM=wayland QT_QUICK_BACKEND=software NO_AT_BRIDGE=1 HG_WIDTH=1100 HG_HEIGHT=700 \
-  HERDR_SOCKET_PATH="$hsock" HERDR_FEED_DIR="$work/feed" HERDR_GRAPHITE_HOST=workstation \
-  quickshell -p "$root/app/shell.qml" >"$work/app.log" 2>&1 &
-qpid=$!
-sleep 6
+start_app() { # start_app DUMPFILE
+  rm -f "$1"
+  env -i PATH="$PATH" HOME="$home" XDG_RUNTIME_DIR="$XDG_RUNTIME_DIR" XDG_STATE_HOME="$home/.local/state" \
+    WAYLAND_DISPLAY="$wsock" QT_QPA_PLATFORM=wayland QT_QUICK_BACKEND=software NO_AT_BRIDGE=1 HG_WIDTH=1100 HG_HEIGHT=700 \
+    HG_DUMP="$1" HERDR_SOCKET_PATH="$hsock" HERDR_FEED_DIR="$work/feed" HERDR_GRAPHITE_HOST=workstation \
+    quickshell -p "$root/app/shell.qml" >"$work/app.log" 2>&1 &
+  qpid=$!
+}
+dumpf=$work/dump.json
+dump() { jq -r "$1" "$dumpf" 2>/dev/null; }
+dump_is() { [ "$(dump "$1")" = "$2" ]; }          # dump_is JQ-EXPR VALUE
+dump_has() { dump "$1" | grep -q "$2"; }          # dump_has JQ-EXPR TEXT
+start_app "$dumpf"
+wait_for 20 test -s "$dumpf"
+sleep 2
 shoot 1-start
+kb=$(h agent list | jq -r '.result.agents[] | select(.name=="builder") | .pane_id')
+kt=$(h agent list | jq -r '.result.agents[] | select(.name=="tester") | .pane_id')
 
-read_has() { h agent read builder 2>/dev/null | grep -q "$1"; }
-read_lacks() { ! read_has "$1"; }
+read_has() { h agent read "${2:-builder}" 2>/dev/null | grep -q "$1"; }
+read_lacks() { ! read_has "$@"; }
 focused() { h agent list | jq -r '.result.agents[] | select(.focused) | .name'; }
-check "the app shows the two sessions (screenshot 1-start)" test "$(h agent list | jq '.result.agents|length')" = 2
+check "the app shows both sessions as cards, with the feed titles" dump_is '[.rows[] | select(.kind=="session") | .title] | sort | join(",")' "Build the demo,Test the demo"
+check "the app shows the states from herdr (working, ready)" dump_is '[.rows[] | select(.kind=="session") | .state] | sort | join(",")' "ready,working"
+check "the app selects the first session by itself" dump_is '.selected' "s:$kb"
 
-# Cards (logical points, window 1100x700 at the screen origin): first card near y=190, second near y=290.
+# Cards (logical points, window 1100x700 at the screen origin): the first card is near y=222, the second near y=333.
 h agent focus tester >/dev/null
 sleep 1
-click 150 215            # first card (canvas-app project comes first: its agent works)
+click 150 333            # second card (tester)
 sleep 1; shoot 2-selected
+check "a click selects the card in the app" wait_for 4 dump_is '.selected' "s:$kt"
 check "a single click only selects: herdr focus stays on the other pane" test "$(focused)" = tester
-dclick 150 215
+dclick 150 222
 check "double click focuses the pane in herdr" wait_for 5 test "$(focused)" = builder
+check "double click selects the card too" dump_is '.selected' "s:$kb"
 
 # --- the message box ---
 click 700 650
 type_text "hello"
 key 28                    # Enter
 check "Enter sends the text to the selected agent" wait_for 8 read_has hello
+check "the app says Sent and clears the box" wait_for 4 dump_is '.status + "|" + .draft' "Sent|"
 sleep 0.5; shoot 3-sent
-type_text "ab"
+type_text "xqz"
 synth_cmd "keydown 42"; key 28; synth_cmd "keyup 42"      # Shift+Enter
-type_text "cd"
+type_text "wvk"
 sleep 0.3; shoot 4-newline
-check "Shift+Enter does not send" read_lacks ab
+check "Shift+Enter does not send" read_lacks xqz
+check "Shift+Enter makes a new line in the box" dump_is '.draft' "$(printf 'xqz\nwvk')"
 key 28
-check "Enter then sends both lines" wait_for 8 read_has cd
+check "Enter then sends both lines" wait_for 8 read_has wvk
 
-# --- the error path: the second agent is blocked, so herdr refuses a prompt ---
+# --- a draft stays with its session ---
+type_text "dr"
+click 150 333; sleep 0.5                                  # select tester
+check "the draft of the other session is not in the box" dump_is '.draft' ""
+click 700 650; type_text "zz"
+click 150 222; sleep 0.5                                  # back to builder
+check "the first draft comes back with its session" dump_is '.draft' "dr"
+synth_cmd "keydown 29"; key 30; synth_cmd "keyup 29"; key 14   # Ctrl+A, Backspace: empty the box
+click 150 333; sleep 0.5
+synth_cmd "keydown 29"; key 30; synth_cmd "keyup 29"; key 14
+click 150 222; sleep 0.5
+
+# --- the list reorders while a session is selected: the text still goes to that session ---
 h pane report-agent "$p2" --source demo --agent claude --state blocked --message "Needs your decision" --seq 3 >/dev/null
-sleep 3
-click 150 225; sleep 0.5   # the card that needs you moved to the top
+check "the card that needs you moves to the top" wait_for 8 dump_is '[.rows[] | select(.kind=="session")][0].title' "Test the demo"
+sleep 1
+check "the selection stays on the same session after the reorder" dump_is '.selected' "s:$kb"
+click 700 650; type_text "xqzafter"; key 28
+check "after the reorder the text goes to the selected session" wait_for 8 read_has xqzafter
+check "and not to the session that moved to the top" read_lacks xqzafter tester
+
+# --- the error path: tester is blocked, so herdr refuses a prompt, and the app shows why ---
+click 150 222; sleep 0.5                                  # tester is on top now
+check "the tester card is selected" dump_is '.selected' "s:$kt"
 click 700 650; type_text "nope"; key 28
-sleep 2; shoot 5-error
-check "the prompt to a blocked agent is refused and not typed" bash -c "! HOME=$home HERDR_SOCKET_PATH=$hsock herdr agent read tester 2>/dev/null | grep -q nope"
+check "the app shows herdr's error" wait_for 6 dump_has '.status' blocked
+check "the error is marked as failed, and the text stays in the box" dump_is '(.failed|tostring) + "|" + .draft' "true|nope"
+sleep 0.5; shoot 5-error
+check "the refused text was not typed into the agent" read_lacks nope tester
 
 # --- Ctrl+W closes the window: the app ends, herdr and its agents stay ---
 synth_cmd "keydown 29"; key 17; synth_cmd "keyup 29"
 app_gone() { ! kill -0 "$qpid" 2>/dev/null; }
 check "closing the window ends the app" wait_for 6 app_gone
 check "herdr and its two agents are still there" two_agents
+
+# --- herdr stopped: the sidebar says so ---
+start_app "$dumpf"
+wait_for 20 test -s "$dumpf"
+h server stop >/dev/null 2>&1
+check "with herdr stopped, the app knows" wait_for 10 dump_is '.herdrUp' false
+sleep 1; shoot 6-herdr-down
+check "the sidebar then has only the machine row" dump_is '.rows | length' 1
 [ $fail = 0 ] && echo "all UI checks passed" || { echo "SOME UI CHECKS FAILED"; exit 1; }
