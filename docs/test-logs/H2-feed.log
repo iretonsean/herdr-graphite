@@ -1,0 +1,144 @@
+H2 data feed, end-to-end test (2026-10-19 18:03)
+herdr herdr 0.8.2   claude 2.1.296 (Claude Code)
+pane w1:p1 in a throwaway herdr; Claude Code with the graphite plugin and a fake API
+ok   Claude Code starts and shows its prompt
+
+--- after start: herdr pane get
+{
+  "title": null,
+  "state_labels": {
+    "blocked": "Needs you",
+    "done": "Done",
+    "idle": "Ready",
+    "working": "Working"
+  },
+  "tokens": {
+    "branch": "fix/post-hang",
+    "machine": "workstation",
+    "mode": "brief",
+    "model": "Opus 5.5",
+    "project": "acme-site",
+    "started": "1792458209",
+    "state": "ready"
+  }
+}
+ok   start: state is ready
+ok   start: machine is the host name
+ok   start: project is the repository folder
+ok   start: branch
+ok   start: model
+ok   start: reply style is brief
+ok   start: started time is set
+ok   start: the idle label says Ready
+ok   prompt: state is working
+ok   prompt: title is the first prompt
+ok   plan: first step runs (steps has n)
+ok   plan: step names what runs now
+
+--- working, step 1: herdr pane get
+{
+  "title": "Fix the Vercel POST hang",
+  "state_labels": {
+    "blocked": "Needs you",
+    "done": "Done",
+    "idle": "Idle",
+    "working": "Updating the plan"
+  },
+  "tokens": {
+    "branch": "fix/post-hang",
+    "context": "12",
+    "machine": "workstation",
+    "mode": "brief",
+    "model": "Opus 5.5",
+    "project": "acme-site",
+    "since": "1792458209",
+    "started": "1792458209",
+    "state": "working",
+    "step": "Reading the form code",
+    "steps": "np"
+  }
+}
+ok   plan: step 1 done, step 2 runs
+ok   needs you: state is needs
+ok   needs you: the ask says what waits
+
+--- needs you: herdr pane get
+{
+  "title": "Fix the Vercel POST hang",
+  "state_labels": {
+    "blocked": "Claude needs your permission",
+    "done": "Done",
+    "idle": "Idle",
+    "working": "Fixing the hang"
+  },
+  "tokens": {
+    "ask": "Claude needs your permission",
+    "branch": "fix/post-hang",
+    "context": "12",
+    "machine": "workstation",
+    "mode": "brief",
+    "model": "Opus 5.5",
+    "project": "acme-site",
+    "since": "1792458217",
+    "started": "1792458209",
+    "state": "needs",
+    "step": "Fixing the hang",
+    "steps": "dn"
+  }
+}
+
+--- herdr agent list
+[{"agent":"claude","agent_status":"blocked","cwd":"$WORK/projects/acme-site","focused":true,"foreground_cwd":"$WORK/projects/acme-site","pane_id":"w1:p1","revision":10,"state_change_seq":1,"state_labels":{"blocked":"Claude needs your permission","done":"Done","idle":"Idle","working":"Fixing the hang"},"tab_id":"w1:t1","terminal_id":"term_65e3b32b9a6d21","terminal_title":"✳ Claude Code","terminal_title_stripped":"Claude Code","title":"Fix the Vercel POST hang","tokens":{"ask":"Claude needs your permission","branch":"fix/post-hang","context":"12","machine":"workstation","mode":"brief","model":"Opus 5.5","project":"acme-site","since":"1792458217","started":"1792458209","state":"needs","step":"Fixing the hang","steps":"dn"},"workspace_id":"w1"}]
+ok   done: state is done
+ok   done: all steps done
+ok   done: last line is the result
+ok   done: context percent is a number
+ok   done: the ask is cleared
+ok   done: since is not before started
+
+--- done: herdr pane get
+{
+  "title": "Fix the Vercel POST hang",
+  "state_labels": {
+    "blocked": "Needs you",
+    "done": "Done",
+    "idle": "Idle",
+    "working": "Working"
+  },
+  "tokens": {
+    "branch": "fix/post-hang",
+    "context": "12",
+    "last": "The form works again.",
+    "machine": "workstation",
+    "mode": "brief",
+    "model": "Opus 5.5",
+    "project": "acme-site",
+    "since": "1792458218",
+    "started": "1792458209",
+    "state": "done",
+    "steps": "dd"
+  }
+}
+ok   feed file: valid JSON with the 2 plan items
+ok   feed file: step names and times are kept
+ok   feed file: herdr reported no error
+ok   /full: Claude Code answers the command
+ok   /full: the feed shows mode full
+ok   /full: the turn ends
+ok   reply style: the system prompt had the Brief rule
+ok   reply style: the next prompt announced Full
+
+--- hook times (ms): SessionStart=37.3ms UserPromptSubmit=14.0ms PostToolUse=10.8ms PostToolUse=9.5ms PostToolUse=8.1ms PostToolUse=8.9ms PostToolUse=8.1ms PostToolUse=7.8ms Notification=7.4ms PostToolUse=3.1ms PostToolUse=8.2ms Stop=22.9ms UserPromptSubmit=9.9ms Stop=21.8ms 
+ok   speed: every hook returns in under 200 ms (slowest 37.3 ms)
+ok   exit: the state token is cleared
+ok   exit: the title is cleared
+ok   exit: the feed file is removed
+
+--- after exit: herdr pane get
+{
+  "title": null,
+  "state_labels": null,
+  "tokens": null
+}
+
+all checks passed

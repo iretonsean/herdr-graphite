@@ -1,0 +1,20 @@
+{
+  "name": "graphite",
+  "version": "0.1.0",
+  "description": "Graphite mods for Claude Code in herdr: sends the session state to herdr for the Graphite cards, and adds the Brief reply rule with /brief, /normal and /full.",
+  "license": "MIT",
+  "types": "./types/index.d.ts",
+  "userConfig": {
+    "defaultMode": {
+      "type": "string",
+      "title": "Reply style",
+      "description": "The reply style of a new session: brief (result first, at most 3 lines of prose), normal (no rule) or full (explain in detail). /brief, /normal and /full change it for one session.",
+      "default": "brief",
+      "options": [
+        "brief",
+        "normal",
+        "full"
+      ]
+    }
+  }
+}
