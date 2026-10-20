@@ -1,4 +1,4 @@
-H2 data feed, end-to-end test (2026-10-19 18:03)
+H2 data feed, end-to-end test (2026-10-19 18:52)
 herdr herdr 0.8.2   claude 2.1.296 (Claude Code)
 pane w1:p1 in a throwaway herdr; Claude Code with the graphite plugin and a fake API
 ok   Claude Code starts and shows its prompt
@@ -18,7 +18,7 @@ ok   Claude Code starts and shows its prompt
     "mode": "brief",
     "model": "Opus 5.5",
     "project": "acme-site",
-    "started": "1792458209",
+    "started": "1792461139",
     "state": "ready"
   }
 }
@@ -51,8 +51,8 @@ ok   plan: step names what runs now
     "mode": "brief",
     "model": "Opus 5.5",
     "project": "acme-site",
-    "since": "1792458209",
-    "started": "1792458209",
+    "since": "1792461139",
+    "started": "1792461139",
     "state": "working",
     "step": "Reading the form code",
     "steps": "np"
@@ -79,8 +79,8 @@ ok   needs you: the ask says what waits
     "mode": "brief",
     "model": "Opus 5.5",
     "project": "acme-site",
-    "since": "1792458217",
-    "started": "1792458209",
+    "since": "1792461147",
+    "started": "1792461139",
     "state": "needs",
     "step": "Fixing the hang",
     "steps": "dn"
@@ -88,7 +88,7 @@ ok   needs you: the ask says what waits
 }
 
 --- herdr agent list
-[{"agent":"claude","agent_status":"blocked","cwd":"$WORK/projects/acme-site","focused":true,"foreground_cwd":"$WORK/projects/acme-site","pane_id":"w1:p1","revision":10,"state_change_seq":1,"state_labels":{"blocked":"Claude needs your permission","done":"Done","idle":"Idle","working":"Fixing the hang"},"tab_id":"w1:t1","terminal_id":"term_65e3b32b9a6d21","terminal_title":"✳ Claude Code","terminal_title_stripped":"Claude Code","title":"Fix the Vercel POST hang","tokens":{"ask":"Claude needs your permission","branch":"fix/post-hang","context":"12","machine":"workstation","mode":"brief","model":"Opus 5.5","project":"acme-site","since":"1792458217","started":"1792458209","state":"needs","step":"Fixing the hang","steps":"dn"},"workspace_id":"w1"}]
+[{"agent":"claude","agent_status":"blocked","cwd":"$WORK/projects/acme-site","focused":true,"foreground_cwd":"$WORK/projects/acme-site","pane_id":"w1:p1","revision":10,"state_change_seq":1,"state_labels":{"blocked":"Claude needs your permission","done":"Done","idle":"Idle","working":"Fixing the hang"},"tab_id":"w1:t1","terminal_id":"term_65e3be15f33901","terminal_title":"✳ Claude Code","terminal_title_stripped":"Claude Code","title":"Fix the Vercel POST hang","tokens":{"ask":"Claude needs your permission","branch":"fix/post-hang","context":"12","machine":"workstation","mode":"brief","model":"Opus 5.5","project":"acme-site","since":"1792461147","started":"1792461139","state":"needs","step":"Fixing the hang","steps":"dn"},"workspace_id":"w1"}]
 ok   done: state is done
 ok   done: all steps done
 ok   done: last line is the result
@@ -113,8 +113,8 @@ ok   done: since is not before started
     "mode": "brief",
     "model": "Opus 5.5",
     "project": "acme-site",
-    "since": "1792458218",
-    "started": "1792458209",
+    "since": "1792461148",
+    "started": "1792461139",
     "state": "done",
     "steps": "dd"
   }
@@ -128,8 +128,11 @@ ok   /full: the turn ends
 ok   reply style: the system prompt had the Brief rule
 ok   reply style: the next prompt announced Full
 
---- hook times (ms): SessionStart=37.3ms UserPromptSubmit=14.0ms PostToolUse=10.8ms PostToolUse=9.5ms PostToolUse=8.1ms PostToolUse=8.9ms PostToolUse=8.1ms PostToolUse=7.8ms Notification=7.4ms PostToolUse=3.1ms PostToolUse=8.2ms Stop=22.9ms UserPromptSubmit=9.9ms Stop=21.8ms 
-ok   speed: every hook returns in under 200 ms (slowest 37.3 ms)
+--- hook times in ms (the slowest of each): prompt.submit=44.6  classic.SessionStart=37.6  classic.Notification=7.7  prompt.compose=13.9  tool.call=16  classic.UserPromptSubmit=12.1  classic.Stop=23.8  classic.PostToolUse=36.2  
+ok   speed: tool.call was timed (9 calls)
+ok   speed: every hook returns in under 200 ms (slowest 44.6 ms)
+ok   subagent: the fake API saw a subagent request
+ok   subagent: its prompt has no reply-style rule
 ok   exit: the state token is cleared
 ok   exit: the title is cleared
 ok   exit: the feed file is removed
@@ -140,5 +143,21 @@ ok   exit: the feed file is removed
   "state_labels": null,
   "tokens": null
 }
+
+--- requests that the fake API saw (time, path, model, messages, tools, subagent, reply styles in the prompt)
+18:52:19 /v1/messages model=claude-opus-5-5 msgs=1 tools=0 subagent=0 style=
+18:52:19 /v1/messages model=claude-opus-5-5 msgs=2 tools=27 subagent=0 style=Brief
+18:52:19 /v1/messages model=claude-opus-5-5 msgs=5 tools=27 subagent=0 style=Brief
+18:52:19 /v1/messages model=claude-opus-5-5 msgs=5 tools=27 subagent=0 style=Brief
+18:52:19 /v1/messages model=claude-opus-5-5 msgs=5 tools=27 subagent=0 style=Brief
+18:52:21 /v1/messages model=claude-opus-5-5 msgs=5 tools=27 subagent=0 style=Brief
+18:52:21 /v1/messages model=claude-opus-5-5 msgs=5 tools=27 subagent=0 style=Brief
+18:52:21 /v1/messages model=claude-opus-5-5 msgs=5 tools=27 subagent=0 style=Brief
+18:52:28 /v1/messages model=claude-opus-5-5 msgs=5 tools=27 subagent=0 style=Brief
+18:52:28 /v1/messages model=claude-opus-5-5 msgs=2 tools=13 subagent=1 style=
+18:52:28 /v1/messages model=claude-opus-5-5 msgs=5 tools=27 subagent=0 style=Brief
+18:52:28 /v1/messages model=claude-opus-5-5 msgs=5 tools=27 subagent=0 style=Brief
+18:52:28 /v1/messages model=claude-opus-5-5 msgs=1 tools=0 subagent=0 style=
+18:52:28 /v1/messages model=claude-opus-5-5 msgs=5 tools=27 subagent=0 style=Full/Brief
 
 all checks passed

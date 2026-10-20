@@ -147,12 +147,22 @@ check "/full: the turn ends"                     wait_for 15 tok_is state done
 check "reply style: the system prompt had the Brief rule" grep -q "style=Brief" "$work/api.log"
 check "reply style: the next prompt announced Full"       grep -q "style=.*Full" "$work/api.log"
 
-# --- speed: the engine's own debug log times each hook of the plugin (next() included, which is only the engine's work) ---
-slowest() { # the longest time in ms of a classic hook of the plugin
-  grep -o 'graphite@inline classic\.[A-Za-z]* settled in [0-9.]*ms' "$work/claude-debug.log" | sed 's/.* in //; s/ms//' | sort -n | tail -1
+# --- speed: the engine's debug log times each hook. classic.*, prompt.compose and prompt.submit are timed by the engine
+# (next() included, which is only the engine's own work). tool.call is timed by the plugin itself, because the engine's
+# time for it contains the tool that runs inside next() ("graphite tool.call feed N ms" lines). ---
+times() { # one "name=ms" per line
+  grep -o 'graphite@inline \(classic\.[A-Za-z]*\|prompt\.compose\|prompt\.submit\) settled in [0-9.]*ms' "$work/claude-debug.log" \
+    | sed 's/graphite@inline //; s/ settled in /=/; s/ms$//'
+  grep -o 'graphite tool\.call feed [0-9.]* ms' "$work/claude-debug.log" | sed 's/graphite //; s/ feed /=/; s/ ms$//'
 }
-out ""; out "--- hook times (ms): $(grep -o 'graphite@inline classic\.[A-Za-z]* settled in [0-9.]*ms' "$work/claude-debug.log" | sed 's/graphite@inline classic\.//; s/ settled in /=/' | tr '\n' ' ')"
+slowest() { times | sed 's/.*=//' | sort -n | tail -1; }
+out ""; out "--- hook times in ms (the slowest of each): $(times | sort -t= -k1,1 -k2,2n | awk -F= '{m[$1]=$2} END {for (k in m) printf "%s=%s  ", k, m[k]}')"
+check "speed: tool.call was timed ($(times | grep -c '^tool.call=') calls)" test "$(times | grep -c '^tool.call=')" -ge 3
 check "speed: every hook returns in under 200 ms (slowest $(slowest) ms)" awk -v t="$(slowest)" 'BEGIN { exit !(t != "" && t < 200) }'
+
+# --- a subagent (started by the Agent step) gets no reply-style rule: its answer is a report to its parent ---
+check "subagent: the fake API saw a subagent request" grep -q 'subagent=1' "$work/api.log"
+check "subagent: its prompt has no reply-style rule" sh -c "grep 'subagent=1' '$work/api.log' | grep -qv 'style=[A-Za-z]'"
 
 # --- exit: the feed clears what it set ---
 h pane send-text "$pane" "/exit" >/dev/null
@@ -161,6 +171,9 @@ check "exit: the state token is cleared"         wait_for 15 tok_is state ""
 check "exit: the title is cleared"               test -z "$(title)"
 check "exit: the feed file is removed"           test ! -e "$file"
 snapshot "after exit"
+
+out ""; out "--- requests that the fake API saw (time, path, model, messages, tools, subagent, reply styles in the prompt)"
+out "$(sed 's|?beta=true||; s|stream=True ||' "$work/api.log")"
 
 out ""
 if [ $fail = 0 ]; then out "all checks passed"; else out "SOME CHECKS FAILED"; fi

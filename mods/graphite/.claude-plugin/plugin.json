@@ -16,5 +16,8 @@
         "full"
       ]
     }
+  },
+  "author": {
+    "name": "herdr-graphite"
   }
 }

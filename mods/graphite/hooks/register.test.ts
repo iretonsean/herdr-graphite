@@ -12,13 +12,21 @@ const CLASSIC = ['SessionStart', 'UserPromptSubmit', 'PostToolUse', 'Notificatio
 /** The world beneath the plugin: env, clock, `process.run` and `session.usage` answered from tables. Returns the herdr calls. */
 function world(on: On, env: Record<string, string> = { HERDR_ENV: '1', HERDR_PANE_ID: PANE }) {
   const calls: Call[] = []
+  const timeouts: Record<string, number | undefined> = {}
+  const mode = { git: 'ok' as 'ok' | 'throw' }
   mock.env(on, env)
   const clock = mock.clock(on, { now: 1_000_000 })
+  on('ui.log', () => ({ value: undefined }) as never)
   // The engine's own end of each classic hook: nothing to add.
   for (const name of CLASSIC) on(`classic.${name}`, () => ({}))
   on('process.run', (_$, e) => {
-    if (e.argv[0] === 'hostname') return { value: { ...RUN_OK, stdout: 'workstation\n' } }
-    if (e.argv[0] === 'git') return { value: { ...RUN_OK, stdout: '/w/acme-site/.git\nfix/post-hang\n' } }
+    if (e.argv[0] === 'hostname') { timeouts.hostname = e.init?.timeoutMs; return { value: { ...RUN_OK, stdout: 'workstation\n' } } }
+    if (e.argv[0] === 'git') {
+      timeouts.git = e.init?.timeoutMs
+      if (mode.git === 'throw') throw new Error('git timed out')
+      return { value: { ...RUN_OK, stdout: '/w/acme-site/.git\nfix/post-hang\n' } }
+    }
+    timeouts.sh = e.init?.timeoutMs
     calls.push({ argv: e.argv, stdin: e.init?.stdin })
     return { value: { ...RUN_OK, stdout: '' } }
   })
@@ -28,11 +36,11 @@ function world(on: On, env: Record<string, string> = { HERDR_ENV: '1', HERDR_PAN
       context: { window: 200000, percent: 62.4 },
       rateLimits: [
         { kind: 'five_hour', percentUsed: 34, resetsAt: '2026-10-19T20:00:00.000Z' },
-        { kind: 'seven_day', percentUsed: 41 },
+        { kind: 'seven_day', percentUsed: 41, resetsAt: '2026-10-26T07:00:00.000Z' },
       ],
     },
   }))
-  return { calls, clock }
+  return { calls, clock, timeouts, mode }
 }
 
 /** The herdr arguments of one report as a map: tokens, labels and the title. */
@@ -278,4 +286,102 @@ test('the task tools of Claude Code make the plan (real PostToolUse shapes)', as
   expect(r.tokens).toMatchObject({ steps: 'dn', step: 'Fixing the hang' })
   const file = JSON.parse(w.calls.at(-1)!.stdin!)
   expect(file.plan.items.map((i: { name: string }) => i.name)).toEqual(['Read the form code', 'Fix the hang'])
+})
+
+// --- Fix round: bad input, git speed, /clear, weekly reset, traits ---------------------------------------
+
+test('an empty event never stops the feed (one per hook)', async ($, on) => {
+  const w = world(on)
+  on('tool.call', () => ({ result: 'ok', text: 'ok', isError: false, isReadOnly: true }) as never)
+  const empty = {} as never
+  await $.classic.SessionStart(empty)
+  await $.classic.UserPromptSubmit(empty)
+  await $.tool.call(empty).catch(() => undefined) // the engine may refuse a call with no tool; the hook must not be the cause
+  await $.classic.PostToolUse(empty)
+  await $.classic.Notification(empty) // no message: the old code threw in shorten()
+  await $.classic.StopFailure(empty)
+  await $.classic.Stop(empty)
+  expect(w.calls.length).toBeGreaterThanOrEqual(5)
+  // The feed still works after all of them.
+  await $.classic.Stop({ ...BASE, stop_hook_active: false, last_assistant_message: 'Done at last.' })
+  expect(read(w.calls.at(-1)!).tokens).toMatchObject({ state: 'done', last: 'Done at last.', ask: '' })
+  await $.classic.SessionEnd(empty)
+  expect(read(w.calls.at(-1)!).verb).toBe('clear')
+})
+
+test('a Notification with no message still reports "needs" and does not break the next report', async ($, on) => {
+  const w = world(on)
+  await $.classic.Notification({ ...BASE, notification_type: 'permission_prompt' } as never)
+  expect(read(w.calls.at(-1)!).tokens.state).toBe('needs')
+  expect(read(w.calls.at(-1)!).labels.blocked).toBe('Needs you')
+  await $.classic.UserPromptSubmit({ ...BASE, prompt: 'Go on' })
+  expect(read(w.calls.at(-1)!).tokens).toMatchObject({ state: 'working', ask: '' })
+})
+
+test('git and hostname get a short timeout, and a failing git keeps the last facts', async ($, on) => {
+  const w = world(on)
+  await $.classic.SessionStart({ ...BASE, source: 'startup' })
+  expect(w.timeouts.git).toBeLessThanOrEqual(200)
+  expect(w.timeouts.hostname).toBeLessThanOrEqual(200)
+  expect(w.timeouts.sh).toBeLessThanOrEqual(1000)
+  expect(read(w.calls.at(-1)!).tokens).toMatchObject({ project: 'acme-site', branch: 'fix/post-hang' })
+  w.mode.git = 'throw' // a slow git
+  await $.classic.UserPromptSubmit({ ...BASE, prompt: 'Go on' })
+  expect(read(w.calls.at(-1)!).tokens).toMatchObject({ project: 'acme-site', branch: 'fix/post-hang' })
+})
+
+test('without any git facts the folder name is the project', async ($, on) => {
+  const w = world(on)
+  w.mode.git = 'throw'
+  await $.classic.UserPromptSubmit({ ...BASE, prompt: 'Go on' })
+  expect(read(w.calls.at(-1)!).tokens).toMatchObject({ project: 'acme-site', branch: '' })
+})
+
+test('/clear starts a new conversation: title, plan, last line and tasks are forgotten', async ($, on) => {
+  const w = world(on)
+  await $.classic.SessionStart({ ...BASE, source: 'startup' })
+  await $.classic.UserPromptSubmit({ ...BASE, prompt: 'Fix the Vercel POST hang' })
+  await $.classic.PostToolUse({ ...BASE, tool_name: 'TaskCreate', tool_input: { subject: 'Read it', description: '', activeForm: 'Reading it' }, tool_response: { task: { id: '1' } }, tool_use_id: 'a' })
+  await $.classic.Stop({ ...BASE, stop_hook_active: false, last_assistant_message: 'Old result.' })
+  let r = read(w.calls.at(-1)!)
+  expect(r.title).toBe('Fix the Vercel POST hang')
+  expect(r.tokens).toMatchObject({ steps: 'p', last: 'Old result.' })
+
+  await $.classic.SessionStart({ ...BASE, source: 'clear' })
+  r = read(w.calls.at(-1)!)
+  expect(r.title).toBe('') // and --clear-title is sent
+  expect(r.flags).toContain('--clear-title')
+  expect(r.tokens).toMatchObject({ state: 'ready', steps: '', step: '', last: '' })
+
+  await $.classic.UserPromptSubmit({ ...BASE, prompt: 'Something new' })
+  expect(read(w.calls.at(-1)!).title).toBe('Something new') // a new first prompt names the new conversation
+  // The old task 1 is gone: a new TaskCreate starts the book again.
+  await $.classic.PostToolUse({ ...BASE, tool_name: 'TaskCreate', tool_input: { subject: 'Plan B', description: '', activeForm: 'Planning B' }, tool_response: { task: { id: '1' } }, tool_use_id: 'b' })
+  expect(read(w.calls.at(-1)!).tokens.steps).toBe('p')
+})
+
+test('compaction keeps the conversation', async ($, on) => {
+  const w = world(on)
+  await $.classic.UserPromptSubmit({ ...BASE, prompt: 'Fix the Vercel POST hang' })
+  await $.classic.SessionStart({ ...BASE, source: 'compact' })
+  expect(read(w.calls.at(-1)!).title).toBe('Fix the Vercel POST hang')
+})
+
+test('the feed file carries the weekly limit and its reset time', async ($, on) => {
+  const w = world(on)
+  await $.classic.Stop({ ...BASE, stop_hook_active: false })
+  const file = JSON.parse(w.calls.at(-1)!.stdin!)
+  expect(file.weekly).toBe(41)
+  expect(file.weekly_reset).toBe(Math.floor(Date.parse('2026-10-26T07:00:00.000Z') / 1000))
+  expect(file.limit_reset).toBe(Math.floor(Date.parse('2026-10-19T20:00:00.000Z') / 1000))
+})
+
+test('the Brief rule is left out for teammate, print, analysis and bare prompts', async ($, on) => {
+  styleWorld(on)
+  for (const trait of ['teammate', 'print', 'analysis', 'bare'] as const) {
+    const { sections } = await $.prompt.compose({ ...(COMPOSE as object), traits: [trait] } as never)
+    expect(sections.some(s => s.id === 'graphite:reply-style')).toBe(false)
+  }
+  const lean = await $.prompt.compose({ ...(COMPOSE as object), traits: ['lean'] } as never)
+  expect(lean.sections.some(s => s.id === 'graphite:reply-style')).toBe(true)
 })

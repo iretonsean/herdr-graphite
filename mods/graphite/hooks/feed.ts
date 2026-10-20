@@ -44,6 +44,8 @@ export type Snapshot = {
   limitReset: number | null
   /** Weekly (7-day) limit use in percent. */
   weekly: number | null
+  /** When the weekly window resets, in ms since the epoch. */
+  weeklyReset: number | null
   /** The result line of the last message. */
   last: string
   /** What the agent waits for ("Allow Bash?"), for the "needs" label. */
@@ -57,14 +59,17 @@ const TITLE_MAX = 60
 /** One character per step in the `steps` token: d done, n now, p pending. herdr cuts a token at 80. */
 const STEPS_MAX = 76
 
+/** A hook input field as text. A missing or wrong-type field becomes an empty string, never a crash. */
+export const str = (v: unknown): string => (typeof v === 'string' ? v : '')
+
 export const emptySnapshot = (): Snapshot => ({
   machine: '', project: '', branch: '', model: '', title: '', mode: 'brief', state: 'ready', started: 0, since: 0,
-  activity: '', plan: [], context: null, limit: null, limitReset: null, weekly: null, last: '', ask: '',
+  activity: '', plan: [], context: null, limit: null, limitReset: null, weekly: null, weeklyReset: null, last: '', ask: '',
 })
 
 /** Cut a text at a word boundary and add "…". */
 export function shorten(text: string, max = MAX): string {
-  const flat = text.replace(/\s+/g, ' ').trim()
+  const flat = str(text).replace(/\s+/g, ' ').trim()
   if (flat.length <= max) return flat
   const cut = flat.slice(0, max - 1)
   const space = cut.lastIndexOf(' ')
@@ -73,7 +78,7 @@ export function shorten(text: string, max = MAX): string {
 
 /** Remove the markdown marks that make a title or a line hard to read: `code`, **bold**, # head, - list, > quote. */
 export function plain(text: string): string {
-  return text
+  return str(text)
     .replace(/```[\s\S]*?```/g, ' ')
     .replace(/!?\[([^\]]*)\]\([^)]*\)/g, '$1')
     .replace(/^\s{0,3}(?:#{1,6}|[-*+>]|\d+[.)])\s+/, '')
@@ -84,19 +89,20 @@ export function plain(text: string): string {
 
 /** The title of a session from its first prompt: the first line that has words, short. */
 export function titleFrom(prompt: string): string {
-  const line = prompt.replace(/```[\s\S]*?```/g, '\n').split('\n').map(plain).find(l => /\w/.test(l)) ?? ''
+  const line = str(prompt).replace(/```[\s\S]*?```/g, '\n').split('\n').map(plain).find(l => /\w/.test(l)) ?? ''
   return shorten(line, TITLE_MAX)
 }
 
 /** A prompt that can name the session. A slash command or an automatic wake-up cannot. */
 export function isTitleSource(prompt: string, source?: string): boolean {
   if (source !== undefined && source !== 'user') return false
-  return !prompt.trimStart().startsWith('/') && /\w/.test(prompt)
+  const p = str(prompt)
+  return !p.trimStart().startsWith('/') && /\w/.test(p)
 }
 
 /** The result line of a message: the first line with words, without markdown. Short replies put the result first. */
 export function resultLine(message: string): string {
-  const line = message.replace(/```[\s\S]*?```/g, '\n').split('\n').map(plain).find(l => /\w/.test(l)) ?? ''
+  const line = str(message).replace(/```[\s\S]*?```/g, '\n').split('\n').map(plain).find(l => /\w/.test(l)) ?? ''
   return shorten(line)
 }
 
@@ -281,7 +287,9 @@ export function metadataArgs(s: Snapshot, seq: number): string[] {
   const c = planCounts(s.plan)
   const working = s.activity !== '' ? s.activity : c.doing !== '' ? c.doing : 'Working'
   const args = ['--source', SOURCE, '--seq', String(seq)]
+  // No title: clear the one that herdr may still hold (after /clear, for example).
   if (s.title !== '') args.push('--title', s.title)
+  else args.push('--clear-title')
   const labels: [string, string][] = [
     ['working', shorten(working)],
     ['blocked', s.ask !== '' ? shorten(s.ask) : 'Needs you'],
@@ -310,5 +318,6 @@ export function feedJson(s: Snapshot, pane: string, sessionId: string, cwd: stri
     started: Math.floor(s.started / 1000), since: Math.floor(s.since / 1000),
     plan: { done: c.done, total: c.total, step: c.step, doing: c.doing, items: s.plan },
     context: s.context, limit: s.limit, limit_reset: s.limitReset === null ? null : Math.floor(s.limitReset / 1000), weekly: s.weekly,
+    weekly_reset: s.weeklyReset === null ? null : Math.floor(s.weeklyReset / 1000),
   })
 }

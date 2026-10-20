@@ -10,7 +10,7 @@ import { MODE_SAYS, SECTION_ID, RULES, isMode, switchNote } from './brief'
 import {
   type FeedState, type Snapshot, type TaskBook, type Timing,
   activityFor, applyTaskCall, clearArgs, emptySnapshot, feedJson, gitFacts, isTitleSource, metadataArgs, modelName,
-  planFromTodos, resultLine, shorten, stateForNotification, titleFrom, todosFromBook,
+  planFromTodos, resultLine, shorten, stateForNotification, str, titleFrom, todosFromBook,
 } from './feed'
 import type { Mode } from '../types'
 
@@ -28,6 +28,14 @@ const SCRIPT = [
   // herdr's answer goes to a file: empty when all is well, the error text when herdr refused the report.
   '"${HERDR_BIN_PATH:-herdr}" pane report-metadata "$pane" "$@" >"$err" 2>&1 </dev/null &',
 ].join('\n')
+
+/** git and hostname must be quick: a hook waits for them. On a timeout the last value stays. */
+const GIT_TIMEOUT_MS = 150
+const HOST_TIMEOUT_MS = 150
+const SH_TIMEOUT_MS = 500
+
+/** Prompts of these kinds get no reply-style rule. */
+const NO_RULE_TRAITS: readonly string[] = ['teammate', 'print', 'analysis', 'bare']
 
 /** Tool events (every call of a tool) send at most one report in this time, and only when something changed. */
 const TOOL_THROTTLE_MS = 1500
@@ -59,13 +67,26 @@ function setState(state: FeedState, now: number): void {
   snap.state = state
 }
 
+/** A new conversation in the same process (/clear): forget the title, the plan and the last message. */
+function resetConversation(): void {
+  snap.title = ''
+  snap.plan = []
+  snap.last = ''
+  snap.activity = ''
+  snap.ask = ''
+  tasks.clear()
+  timing.clear()
+  feed.hasTitleFromPrompt = false
+}
+
 /** Read the git facts again (the branch can change). */
 async function refreshGit($: EngineInterface, cwd: string): Promise<void> {
   try {
-    const r = await $.process.run(['git', '-C', cwd, 'rev-parse', '--path-format=absolute', '--git-common-dir', '--abbrev-ref', 'HEAD'], { timeoutMs: 1500 })
+    const r = await $.process.run(['git', '-C', cwd, 'rev-parse', '--path-format=absolute', '--git-common-dir', '--abbrev-ref', 'HEAD'], { timeoutMs: GIT_TIMEOUT_MS })
     feed.git = { cwd, ...gitFacts(r.exitCode === 0 ? r.stdout : '', cwd) }
   } catch {
-    feed.git = { cwd, ...gitFacts('', cwd) }
+    // A slow or failing git: keep the last facts for this folder. Without any, the folder name is the project.
+    if (feed.git?.cwd !== cwd) feed.git = { cwd, ...gitFacts('', cwd) }
   }
   snap.project = feed.git.project
   snap.branch = feed.git.branch
@@ -74,7 +95,7 @@ async function refreshGit($: EngineInterface, cwd: string): Promise<void> {
 async function refreshHost($: EngineInterface): Promise<void> {
   if (feed.hostName !== '') return
   try {
-    feed.hostName = (await $.process.run(['hostname'], { timeoutMs: 1000 })).stdout.trim()
+    feed.hostName = (await $.process.run(['hostname'], { timeoutMs: HOST_TIMEOUT_MS })).stdout.trim()
   } catch { /* the card shows no machine */ }
   snap.machine = feed.hostName
 }
@@ -90,7 +111,11 @@ async function refreshUsage($: EngineInterface): Promise<void> {
       const at = five.resetsAt === undefined ? NaN : Date.parse(five.resetsAt)
       snap.limitReset = Number.isNaN(at) ? null : at
     }
-    if (week) snap.weekly = week.percentUsed
+    if (week) {
+      snap.weekly = week.percentUsed
+      const at = week.resetsAt === undefined ? NaN : Date.parse(week.resetsAt)
+      snap.weeklyReset = Number.isNaN(at) ? null : at
+    }
   } catch { /* keep the last figures */ }
 }
 
@@ -103,8 +128,8 @@ async function report(
     feed.lastSeq = Math.max(now, feed.lastSeq + 1)
     const args = verb === 'write' ? metadataArgs(snap, feed.lastSeq) : clearArgs(feed.lastSeq)
     await $.process.run(['sh', '-c', SCRIPT, 'sh', verb, pane, ...args], {
-      stdin: verb === 'write' ? feedJson(snap, pane, e.session_id, e.cwd, now) : '',
-      timeoutMs: 1000,
+      stdin: verb === 'write' ? feedJson(snap, pane, str(e.session_id), str(e.cwd), now) : '',
+      timeoutMs: SH_TIMEOUT_MS,
     })
     feed.lastSent = now
     feed.lastKey = JSON.stringify(args.slice(4))
@@ -120,15 +145,16 @@ export const register: Register = (on, options) => {
     const pane = await inHerdr($)
     if (pane) {
       const now = await $.clock.now()
+      if (e.source === 'clear') resetConversation()
       if (e.source !== 'compact') {
         snap.started = now
         setState('ready', now)
         snap.activity = ''
         snap.ask = ''
       }
-      snap.model = modelName(e.model) || snap.model
-      if (e.session_title) snap.title = shorten(e.session_title, 60)
-      await Promise.all([refreshHost($), refreshGit($, e.cwd), refreshUsage($)])
+      snap.model = modelName(str(e.model)) || snap.model
+      if (str(e.session_title) !== '') snap.title = shorten(str(e.session_title), 60)
+      await Promise.all([refreshHost($), refreshGit($, str(e.cwd)), refreshUsage($)])
       await report($, pane, e, now)
     }
     return next(e)
@@ -138,15 +164,15 @@ export const register: Register = (on, options) => {
     const pane = await inHerdr($)
     if (pane) {
       const now = await $.clock.now()
-      if (e.session_title) snap.title = shorten(e.session_title, 60)
-      else if (!feed.hasTitleFromPrompt && isTitleSource(e.prompt, e.source)) {
-        snap.title = titleFrom(e.prompt)
+      if (str(e.session_title) !== '') snap.title = shorten(str(e.session_title), 60)
+      else if (!feed.hasTitleFromPrompt && isTitleSource(str(e.prompt), e.source)) {
+        snap.title = titleFrom(str(e.prompt))
         feed.hasTitleFromPrompt = true
       }
       setState('working', now)
       snap.activity = ''
       snap.ask = ''
-      await Promise.all([refreshHost($), refreshGit($, e.cwd), refreshUsage($)])
+      await Promise.all([refreshHost($), refreshGit($, str(e.cwd)), refreshUsage($)])
       await report($, pane, e, now)
     }
     return next(e)
@@ -156,14 +182,17 @@ export const register: Register = (on, options) => {
   on('tool.call', async ($, e, next) => {
     const pane = await inHerdr($)
     if (pane) {
+      const t0 = Date.now()
       const now = await $.clock.now()
-      snap.activity = activityFor(String(e.tool), e)
+      snap.activity = activityFor(str(e.tool), e)
       if (snap.state === 'needs' || snap.state === 'ready' || snap.state === 'done') setState('working', now)
       const changed = JSON.stringify(metadataArgs(snap, 0).slice(4)) !== feed.lastKey
       if (changed && now - feed.lastSent >= TOOL_THROTTLE_MS) {
         await refreshHost($)
         await report($, pane, { session_id: '', cwd: feed.git?.cwd ?? '' }, now)
       }
+      // The engine times tool.call with the tool itself inside next(). This line times only the feed.
+      $.ui.log(`graphite tool.call feed ${Date.now() - t0} ms`, { to: 'debug' })
     }
     return next(e)
   })
@@ -173,11 +202,12 @@ export const register: Register = (on, options) => {
     if (pane) {
       const now = await $.clock.now()
       let isPlan = false
-      if (e.tool_name === 'TodoWrite') {
+      const tool = str(e.tool_name)
+      if (tool === 'TodoWrite') {
         snap.plan = planFromTodos(e.tool_input, timing, now)
         isPlan = true
-      } else if (e.tool_name === 'TaskCreate' || e.tool_name === 'TaskUpdate') {
-        applyTaskCall(tasks, e.tool_name, e.tool_input, e.tool_response)
+      } else if (tool === 'TaskCreate' || tool === 'TaskUpdate') {
+        applyTaskCall(tasks, tool, e.tool_input, e.tool_response)
         snap.plan = planFromTodos(todosFromBook(tasks), timing, now)
         isPlan = true
       }
@@ -196,8 +226,9 @@ export const register: Register = (on, options) => {
     const pane = await inHerdr($)
     if (pane) {
       const now = await $.clock.now()
-      setState(stateForNotification(e.notification_type), now)
-      snap.ask = e.notification_type === 'idle_prompt' ? '' : e.message
+      const type = str(e.notification_type)
+      setState(stateForNotification(type), now)
+      snap.ask = type === 'idle_prompt' ? '' : str(e.message)
       snap.activity = ''
       await report($, pane, e, now)
     }
@@ -211,8 +242,8 @@ export const register: Register = (on, options) => {
       setState('done', now)
       snap.activity = ''
       snap.ask = ''
-      if (e.last_assistant_message) snap.last = resultLine(e.last_assistant_message)
-      await Promise.all([refreshGit($, e.cwd), refreshUsage($)])
+      if (str(e.last_assistant_message) !== '') snap.last = resultLine(str(e.last_assistant_message))
+      await Promise.all([refreshGit($, str(e.cwd)), refreshUsage($)])
       await report($, pane, e, now)
     }
     return next(e)
@@ -224,7 +255,7 @@ export const register: Register = (on, options) => {
       const now = await $.clock.now()
       setState('failed', now)
       snap.activity = ''
-      snap.last = e.last_assistant_message ? resultLine(e.last_assistant_message) : shorten(`Stopped: ${e.error_details ?? e.error}`)
+      snap.last = str(e.last_assistant_message) !== '' ? resultLine(str(e.last_assistant_message)) : shorten(`Stopped: ${str(e.error_details) || str(e.error) || 'unknown error'}`)
       await refreshUsage($)
       await report($, pane, e, now)
     }
@@ -258,6 +289,9 @@ export const register: Register = (on, options) => {
     const result = await next(e)
     const mode = (await read($, modeAtom)) ?? feed.fallback
     feed.composed = mode
+    // A teammate's reply goes to its lead, a print session (-p, SDK) feeds a script, and an analysis or a bare
+    // prompt is not a chat. None of them gets the chat rule. (A subagent's prompt is built without this hook.)
+    if (e.traits.some(t => NO_RULE_TRAITS.includes(t))) return result
     if (mode === 'normal') return result
     return { sections: [...result.sections, { id: SECTION_ID, text: RULES[mode], scope: 'session' as const }] }
   })

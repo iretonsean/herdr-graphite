@@ -1,11 +1,14 @@
 {
   "name": "herdr-graphite",
-  "owner": { "name": "herdr-graphite" },
+  "owner": {
+    "name": "herdr-graphite"
+  },
   "plugins": [
     {
       "name": "graphite",
       "source": "./mods/graphite",
       "description": "Sends the state of a Claude Code session to herdr for the Graphite cards, and adds the Brief reply rule with /brief, /normal and /full."
     }
-  ]
+  ],
+  "description": "Claude Code plugins for the herdr-graphite project."
 }

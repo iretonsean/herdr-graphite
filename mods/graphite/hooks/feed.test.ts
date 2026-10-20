@@ -3,7 +3,7 @@ import { expect, test } from 'claude-code/testing'
 import { RULES, isMode, switchNote } from './brief'
 import {
   type Snapshot, type Timing, MAX_TOKENS, SOURCE,
-  activityFor, applyTaskCall, clearArgs, emptySnapshot, feedJson, gitFacts, isTitleSource, metadataArgs, modelName,
+  activityFor, applyTaskCall, str, clearArgs, emptySnapshot, feedJson, gitFacts, isTitleSource, metadataArgs, modelName,
   planCounts, planFromTodos, resultLine, shorten, stateForNotification, titleFrom, todosFromBook, tokens,
 } from './feed'
 
@@ -171,6 +171,7 @@ test('metadataArgs: source, seq, title, state labels and tokens, as separate arg
 
 test('metadataArgs: no title flag without a title; failed and ready show in the idle label', () => {
   expect(metadataArgs(snapshot({ title: '' }), 1)).not.toContain('--title')
+  expect(metadataArgs(snapshot({ title: '' }), 1)).toContain('--clear-title') // herdr may hold an old title
   expect(metadataArgs(snapshot({ state: 'failed' }), 1)).toContain('idle=Failed')
   expect(metadataArgs(snapshot({ state: 'ready' }), 1)).toContain('idle=Ready')
   expect(metadataArgs(snapshot({ state: 'needs', ask: 'Wants to run: git push' }), 1)).toContain('blocked=Wants to run: git push')
@@ -193,6 +194,36 @@ test('feedJson holds the whole plan for the app', () => {
   expect(j.state_label).toBe('Working')
   expect(j.limit_reset).toBe(9100)
   expect(j.plan).toEqual({ done: 1, total: 1, step: '', doing: '', items: [{ name: 'Read', doing: 'Reading', status: 'done', seconds: null }] })
+})
+
+test('the feed functions survive wrong input', () => {
+  expect(shorten(undefined as never)).toBe('')
+  expect(titleFrom(undefined as never)).toBe('')
+  expect(resultLine(null as never)).toBe('')
+  expect(isTitleSource(undefined as never)).toBe(false)
+  expect(str(5)).toBe('')
+  expect(str('x')).toBe('x')
+  expect(() => metadataArgs({ ...snapshot(), ask: undefined as never, last: undefined as never, activity: undefined as never }, 1)).not.toThrow()
+})
+
+test('the weekly reset is in the feed file only', () => {
+  const j = JSON.parse(feedJson(snapshot({ weeklyReset: 5_000_000 }), 'p', 's', '/c', 6_000_000))
+  expect(j.weekly_reset).toBe(5000)
+  expect(tokens(snapshot()).map(([n]) => n)).not.toContain('weekly_reset') // the 16 tokens are full
+  expect(JSON.parse(feedJson(snapshot(), 'p', 's', '/c', 0)).weekly_reset).toBeNull()
+})
+
+test('the Brief rule is for chat replies only, and asks for no offer to say more', () => {
+  const brief = RULES.brief
+  expect(brief).toContain('for chat replies only')
+  expect(brief).toContain('Files, documents, reports, briefs, handoffs, reviews, commit messages and pull request text are written in full')
+  expect(brief).toContain('asks for a full report or for a fixed report form, give it in full')
+  expect(brief).toContain('That request comes before this rule')
+  expect(brief).toContain('Do not end with an offer to say more')
+  expect(brief).not.toMatch(/offer (it|more|to say more)\.?\s*$/m) // no line that tells the model to offer more
+  expect(brief).not.toContain('When the answer needs more room')
+  expect(RULES.full).toContain('written in full')
+  expect(RULES.full).toContain('That request comes before this rule')
 })
 
 test('the reply rules: modes, the Files and Tests form, the switch note', () => {

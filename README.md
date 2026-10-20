@@ -58,7 +58,7 @@ This puts the backups back and sets the theme and the status line to their earli
 
 H2 adds a small Claude Code plugin, `graphite` (in [mods/graphite/](mods/graphite/)). It tells herdr what each session does, so the Graphite app can draw the session cards. It also adds the Brief reply rule.
 
-**What it sends.** Each hook runs `herdr pane report-metadata` in the background. A hook returns in about 10 to 40 ms and never waits for herdr. Outside herdr the plugin does nothing.
+**What it sends.** Each hook runs `herdr pane report-metadata` in the background. A hook returns in about 10 to 45 ms and never waits for herdr. git and hostname have a 150 ms limit; on a timeout the last value stays. Outside herdr the feed does nothing. The Brief rule works in every session.
 
 | Field (token) | Content |
 |---|---|
@@ -67,16 +67,16 @@ H2 adds a small Claude Code plugin, `graphite` (in [mods/graphite/](mods/graphit
 | `machine`, `project`, `branch` | The host name, the git repository folder (also in a worktree) and the branch |
 | `model`, `mode` | "Opus 5.5"; the reply style: `brief`, `normal` or `full` |
 | `step`, `steps` | The step that runs now; one letter per plan step: `d` done, `n` now, `p` pending |
-| `context`, `limit`, `limit_reset`, `weekly` | Context use %, 5-hour session limit %, when it resets (epoch seconds), weekly limit %. The limits exist only on a Claude subscription. |
+| `context`, `limit`, `limit_reset`, `weekly` | Context use %, 5-hour session limit %, when it resets (epoch seconds), weekly limit %. The limits exist only on a Claude subscription. The weekly reset time (`weekly_reset`) is in the feed file only. |
 | `last` | The first line of the last message (the result line) |
 | `ask` | What the agent waits for, while `state` is `needs` |
 | `started`, `since` | Epoch seconds: session start and last state change ("waiting 4 min" is now minus `since`) |
 
 The state labels are also set, so the herdr sidebar shows them: `working` is the current step or tool ("Editing feed.ts"), `blocked` is the question, `done` is "Done", and `idle` is "Ready", "Idle" or "Failed". herdr keeps its own live `agent_status`. Use it for the exact moment of a change, and use these fields for the facts.
 
-The plan comes from TodoWrite, or from TaskCreate and TaskUpdate. The plugin also writes the whole snapshot, with all plan steps, step times and the ask, to `~/.local/state/herdr-graphite/feed/<pane>.json` for the app. If herdr refuses a report, its answer is in the `.err` file beside it.
+The plan comes from TodoWrite, or from TaskCreate and TaskUpdate. After `/clear`, the title, the plan and the last line start over. The plugin also writes the whole snapshot, with all plan steps, step times and the ask, to `~/.local/state/herdr-graphite/feed/<pane>.json` for the app. If herdr refuses a report, its answer is in the `.err` file beside it.
 
-**Reply style (Brief).** The plugin adds a rule to the system prompt: the result in the first line, at most 3 lines of prose, then structured blocks (`Files:` and `Tests:` lines in a fixed form). `/brief`, `/normal` and `/full` change the style for one session. The next prompt carries a note about the change, so the system prompt (and the prompt cache) stays as it is. The default style is the `defaultMode` option of the plugin.
+**Reply style (Brief).** The plugin adds a rule to the system prompt for chat replies: the result in the first line, at most 3 lines of prose, then structured blocks (`Files:` and `Tests:` lines in a fixed form). The rule says that files, documents, reports, briefs, handoffs, commit messages and pull request text are written in full, that a request for a full report comes first, and that no reply ends with an offer to say more (a session on its own has nobody to answer). Teammate, print (`-p`) and analysis prompts get no rule, and a subagent's prompt is built without it (checked in the end-to-end test). `/brief`, `/normal` and `/full` change the style for one session. The next prompt carries a note about the change, so the system prompt (and the prompt cache) stays as it is. The default style is the `defaultMode` option of the plugin.
 
 **Install.** The plugin loads in the next Claude Code session. It changes your user settings (`enabledPlugins`, `extraKnownMarketplaces`) and nothing else.
 
@@ -85,7 +85,7 @@ claude plugin marketplace add /path/to/herdr-graphite
 claude plugin install graphite@herdr-graphite --scope user
 ```
 
-**Turn off.** `claude plugin disable graphite@herdr-graphite` stops the feed and the Brief rule. `claude plugin enable graphite@herdr-graphite` starts them again. For one session, use `/normal`.
+**Turn off.** `claude plugin disable graphite@herdr-graphite` stops the feed and the Brief rule. `claude plugin enable graphite@herdr-graphite` starts them again. The feed has no switch of its own: it stops only when the plugin is off. For one session, `/normal` turns off the Brief rule only, not the feed.
 
 **Undo.**
 

@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """A stand-in for the Anthropic Messages API, for the feed test. It answers every request with a scripted turn:
 a plan (TaskCreate and TaskUpdate calls, or TodoWrite), a Bash call that takes 2 s, a Write call (which asks for permission),
-then a final text. It is NOT a model.
+an Agent call (the subagent's request gets a short report), then a final text. It is NOT a model.
 Usage: fake-anthropic.py PORT LOGFILE [tasks|todos] [PROJECT_FOLDER]   (listens on 127.0.0.1 only)"""
 import json, re, sys, time
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
@@ -28,6 +28,7 @@ def steps(kind):
             ("TaskUpdate", {"taskId": "1", "status": "completed"}),
             ("TaskUpdate", {"taskId": "2", "status": "in_progress"}),
             ("Write", {"file_path": WORK + "/NOTES.md", "content": "The fix is in the route handler.\n"}),
+            ("Agent", {"description": "Check the fix", "prompt": "SUBAGENT_TASK: say hello", "subagent_type": "general-purpose"}),
             ("TaskUpdate", {"taskId": "2", "status": "completed"})]
 
 
@@ -40,6 +41,8 @@ def script(body):
     tools = {t.get("name") for t in body.get("tools", [])}
     if "title" in system.lower() and not tools:
         return [("text", "Fix the form hang")]
+    if "SUBAGENT_TASK" in json.dumps(msgs[:1]):  # the request of a subagent that the Agent step started
+        return [("text", "Report from the subagent: all is well.")]
     kind = "todos" if PLAN == "todos" else "tasks"
     todo = steps(kind)
     if "Bash" not in tools:  # a side request (permission check, summary): plain text
@@ -75,7 +78,7 @@ class H(BaseHTTPRequestHandler):
         body = json.loads(self.rfile.read(n) or b"{}")
         with open(LOG, "a") as f:
             styles = "/".join(re.findall(r"Reply style: (\w+)", json.dumps(body)))
-            f.write("%s %s model=%s stream=%s msgs=%d tools=%d style=%s\n" % (time.strftime("%H:%M:%S"), self.path, body.get("model"), body.get("stream"), len(body.get("messages", [])), len(body.get("tools", [])), styles))
+            f.write("%s %s model=%s stream=%s msgs=%d tools=%d subagent=%d style=%s\n" % (time.strftime("%H:%M:%S"), self.path, body.get("model"), body.get("stream"), len(body.get("messages", [])), len(body.get("tools", [])), int("SUBAGENT_TASK" in json.dumps(body.get("messages", [])[:1])), styles))
         if self.path.endswith("count_tokens"):
             return self._json({"input_tokens": 1000})
         parts = script(body)
