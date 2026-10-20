@@ -1,0 +1,71 @@
+# Ghostty config for herdr-graphite (H1).
+# Font, padding and Graphite colours. The other lines (cursor, keys) are the Omarchy defaults.
+
+# Font: iA Writer Mono S (Arch package ttf-ia-writer, in the Omarchy repo). Rounder letters and wider spacing than
+# SF Mono. Adwaita Mono (package adwaita-fonts) fills any missing glyph. Ligatures are off, so code reads as typed.
+font-family = "iA Writer Mono S"
+font-family = "Adwaita Mono"
+font-style = Regular
+font-size = 10
+font-feature = -calt
+font-feature = -liga
+adjust-cell-height = 14%
+
+# Window: roomy padding on every side, the same colour as the background.
+window-theme = ghostty
+window-padding-x = 24
+window-padding-y = 20
+window-padding-balance = true
+window-padding-color = background
+confirm-close-surface = false
+resize-overlay = never
+gtk-toolbar-style = flat
+
+# Graphite colours (Graphite theme for Omarchy). They are written here, not read from the Omarchy theme folder.
+background = #1a1a1c
+foreground = #e5e5e7
+cursor-color = #f5f5f7
+selection-background = #264a73
+selection-foreground = #f5f5f7
+palette = 0=#1a1a1c
+palette = 1=#ff453a
+palette = 2=#32d74b
+palette = 3=#ffd60a
+palette = 4=#0a84ff
+palette = 5=#bf5af2
+palette = 6=#64d2ff
+palette = 7=#e5e5e7
+palette = 8=#3a3a3c
+palette = 9=#ff6961
+palette = 10=#5de37a
+palette = 11=#ffe066
+palette = 12=#409cff
+palette = 13=#da8fff
+palette = 14=#8ee0ff
+palette = 15=#f5f5f7
+
+# Cursor styling
+cursor-style = block
+cursor-style-blink = false
+
+# Cursor styling + SSH session terminfo
+# (all shell integration options must be passed together)
+shell-integration-features = no-cursor,ssh-env
+
+# Keyboard bindings
+keybind = shift+insert=paste_from_clipboard
+keybind = control+insert=copy_to_clipboard
+# Send Shift+Enter as CSI-u so TUIs can distinguish it from Enter.
+keybind = shift+enter=csi:13;2u
+# Legacy encoding sends Alt+Shift+Enter the same as Alt+Enter; send CSI-u so herdr can match alt+shift+enter.
+keybind = alt+shift+enter=csi:13;4u
+keybind = super+control+shift+alt+arrow_down=resize_split:down,100
+keybind = super+control+shift+alt+arrow_up=resize_split:up,100
+keybind = super+control+shift+alt+arrow_left=resize_split:left,100
+keybind = super+control+shift+alt+arrow_right=resize_split:right,100
+
+# Slow down mouse scrolling
+mouse-scroll-multiplier = 0.95
+
+# Fix general slowness on Hyprland (https://github.com/ghostty-org/ghostty/discussions/3224)
+async-backend = epoll

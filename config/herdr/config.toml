@@ -1,0 +1,112 @@
+onboarding = false
+# herdr config for the Graphite look (herdr-graphite, H1).
+# Colours: the Graphite theme for Omarchy. Tab bar hidden while a workspace has one tab.
+# The [keys] block mirrors the Omarchy tmux keys. Edit it to match yours.
+
+[theme]
+# Base theme. Every token that the look needs is set below, so the base only fills the gaps.
+name = "terminal"
+
+[theme.custom]
+accent = "#0a84ff"          # Graphite accent
+panel_bg = "#18181a"        # surface_1: tab row, bars, dialogs
+sidebar_bg = "#18181a"      # surface_1
+active_row_bg = "#303033"   # lift: the focused row lifts, it does not turn blue
+selection_bg = "#264a73"    # Graphite selection
+surface0 = "#222224"        # surface_2
+surface1 = "#2c2c2e"        # surface_3
+surface_dim = "#0e0e10"     # surface_0
+overlay0 = "#78787d"        # text_4, a little lighter so small text stays readable
+overlay1 = "#98989d"        # text_3
+text = "#e5e5e7"            # text_2
+subtext0 = "#98989d"        # text_3
+mauve = "#7d8aa3"          # label_tint: branch names stay quiet
+green = "#7fd48f"           # ok
+yellow = "#ffcc66"          # warn
+red = "#ff8078"             # error
+blue = "#0a84ff"
+teal = "#64d2ff"
+peach = "#ff9f0a"
+
+[terminal]
+# New splits, tabs and workspaces open in the folder of the pane you were in.
+new_cwd = "follow"
+
+[keys]
+prefix = "ctrl+space"
+
+# Config and help
+reload_config = "prefix+q"
+help = "prefix+?"
+detach = "prefix+d"
+
+# Copy mode
+copy_mode = "prefix+["
+
+# Panes
+split_horizontal = ["prefix+h", "alt+enter"]
+split_vertical = ["prefix+v", "alt+shift+enter"]
+close_pane = ["prefix+x", "alt+esc"]
+zoom = "prefix+z"
+last_pane = "prefix+;"
+
+focus_pane_left = "ctrl+alt+left"
+focus_pane_down = "ctrl+alt+down"
+focus_pane_up = "ctrl+alt+up"
+focus_pane_right = "ctrl+alt+right"
+
+resize_mode = ["prefix+ctrl+left", "prefix+ctrl+down", "prefix+ctrl+up", "prefix+ctrl+right"]
+
+# Like resize-pane on C-M-S-arrows
+resize_pane_left = "ctrl+alt+shift+left"
+resize_pane_down = "ctrl+alt+shift+down"
+resize_pane_up = "ctrl+alt+shift+up"
+resize_pane_right = "ctrl+alt+shift+right"
+
+# No tmux equivalent; herdr's default prefix+shift+p is taken by previous session
+rename_pane = "prefix+shift+o"
+
+# Windows -> tabs
+new_tab = "prefix+c"
+rename_tab = "prefix+r"
+close_tab = "prefix+k"
+switch_tab = ["prefix+1..9", "alt+1..9"]
+previous_tab = ["prefix+p", "alt+left"]
+next_tab = ["prefix+n", "alt+right"]
+
+# Like swap-window -t -1/+1 on M-S-Left/Right
+move_tab_previous = "alt+shift+left"
+move_tab_next = "alt+shift+right"
+
+# Sessions -> workspaces
+new_workspace = "prefix+shift+c"
+rename_workspace = "prefix+shift+r"
+close_workspace = "prefix+shift+k"
+previous_workspace = ["prefix+shift+p", "alt+up"]
+next_workspace = ["prefix+shift+n", "alt+down"]
+
+[ui]
+accent = "#0a84ff"
+
+# Hide the tab row when a workspace has one tab. herdr 0.9 has no key to hide it for good.
+hide_tab_bar_when_single_tab = true
+prompt_new_tab_name = false
+
+# Symbols tell the agent states apart by shape, not only by colour.
+status_indicators = "symbols"
+
+# Calm panes: no frame around the pane area, no scrollbar column.
+pane_gaps = false
+pane_outer_borders = false
+pane_scrollbars = false
+
+# Closing a workspace never asks (as in tmux).
+confirm_close = false
+mouse_capture = true
+
+# Shows only when the tab row shows.
+tab_bar_right = [{ type = "zoom" }, { type = "hostname" }]
+
+# The window title is what Hyprland shows in the group bar.
+window_title = "{hostname}: {workspace}"
+agent_panel_sort = "spaces"
