@@ -10,6 +10,9 @@ font-size = 10
 font-feature = -calt
 font-feature = -liga
 adjust-cell-height = 14%
+# iA Writer Mono S has one wider glyph: "%" is 0.667 em wide, all others 0.600 em. Ghostty sizes every cell by the
+# widest ASCII glyph, so without this line all letters sit 11 % too far apart. -10 % gives the normal 0.600 em cell.
+adjust-cell-width = -10%
 
 # Window: roomy padding on every side, the same colour as the background.
 window-theme = ghostty

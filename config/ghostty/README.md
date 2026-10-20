@@ -8,6 +8,7 @@
 |---|---|---|
 | Font | iA Writer Mono S, then Adwaita Mono | Rounder letters and wider spacing than SF Mono. `ttf-ia-writer` is in the Omarchy repo. `adwaita-fonts` is in Arch `extra`. |
 | Size and line height | 10 pt, +14 % | A calmer text block. |
+| Cell width | -10 % | iA Writer Mono S draws "%" 11 % wider than its other glyphs (0.667 em, not 0.600 em). Ghostty sizes each cell by the widest glyph, so letters would sit too far apart. -10 % restores the normal spacing. |
 | Ligatures | off | Code shows as typed. |
 | Padding | 24 px left and right, 20 px top and bottom | Roomy edges. `window-padding-balance` spreads the spare pixels. |
 | Colours | The Graphite palette, written in the file | The file does not read the Omarchy theme folder, so it looks the same on any theme. |

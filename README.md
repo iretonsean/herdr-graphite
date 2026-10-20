@@ -50,9 +50,9 @@ The script copies each file that it replaces to `<file>.bak.graphite-<time>`. It
 scripts/uninstall.sh
 ```
 
-This puts the backups back and sets the theme and the status line to their earlier values. The Ghostty package stays installed.
+This puts the backups back and sets the theme and the status line to their earlier values. It undoes only the newest install. After two installs, run it twice. The Ghostty package stays installed.
 
-**Check the status line:** `scripts/test-statusline.sh` runs it with sample input.
+**Tests:** `scripts/test-statusline.sh` runs the status line with sample input. `scripts/test-install.sh` runs install and uninstall in a temporary home, with a fake terminal command, so nothing real changes.
 
 ## The idea
 
