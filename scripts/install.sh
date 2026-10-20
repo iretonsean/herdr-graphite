@@ -6,9 +6,11 @@
 #   --with-ghostty          Install the Ghostty package first: sudo -n pacman -S --needed --noconfirm ghostty.
 #                           "sudo -n" never asks for a password; it fails when sudo needs one.
 #   --set-default-terminal  Run omarchy-default-terminal ghostty, so the Omarchy herdr launcher opens Ghostty.
+#                           It needs Ghostty (installed, or --with-ghostty). It shows a desktop notification.
+#                           It backs up ~/.config/xdg-terminals.list first; uninstall restores that file.
 #                           Without it, use the launch line in config/ghostty/README.md.
 #
-# Every file that this script replaces is first copied to <file>.bak.graphite-<timestamp>. A manifest in
+# Every file that this script replaces is first copied to <file>.bak.graphite-<timestamp>-<NN>.<NN>. A manifest in
 # ~/.local/state/herdr-graphite/ records what changed. scripts/uninstall.sh reads it.
 # To test without touching your real config: HOME=$(mktemp -d) scripts/install.sh
 set -euo pipefail
@@ -19,7 +21,7 @@ for a in "$@"; do
     --dry-run) dry=1 ;;
     --with-ghostty) with_ghostty=1 ;;
     --set-default-terminal) set_term=1 ;;
-    -h|--help) sed -n 2,13p "$0" | sed 's/^# \{0,1\}//'; exit 0 ;;
+    -h|--help) sed -n 2,16p "$0" | sed 's/^# \{0,1\}//'; exit 0 ;;
     *) echo "unknown option: $a" >&2; exit 2 ;;
   esac
 done
@@ -27,7 +29,9 @@ done
 root=$(cd "$(dirname "$0")/.." && pwd)
 stamp=$(date +%Y%m%d-%H%M%S)
 state=$HOME/.local/state/herdr-graphite
-manifest=$state/install-$stamp.json
+n=1; while compgen -G "$state/install-$stamp-$(printf %02d $n).json*" >/dev/null; do n=$((n + 1)); done
+tag=$stamp-$(printf %02d $n) # -NN keeps the names unique and in order when two installs share a second
+manifest=$state/install-$tag.json
 settings=$HOME/.claude/settings.json
 statusline_cmd=$HOME/.claude/graphite-statusline.sh
 
@@ -42,6 +46,11 @@ files=(
 command -v jq >/dev/null || { echo "install: jq is required" >&2; exit 1; }
 for f in "${files[@]}"; do [ -f "${f%%|*}" ] || { echo "install: missing ${f%%|*}" >&2; exit 1; }; done
 if [ -f "$settings" ]; then jq -e . "$settings" >/dev/null || { echo "install: $settings is not valid JSON; nothing changed" >&2; exit 1; }; fi
+
+if [ $set_term = 1 ] && [ $with_ghostty = 0 ] && ! command -v ghostty >/dev/null; then
+  echo "install: --set-default-terminal needs Ghostty. Install it first, or add --with-ghostty. Nothing changed." >&2
+  exit 1
+fi
 
 say() { if [ $dry = 1 ]; then echo "[dry-run] $*"; else echo "$*"; fi; }
 run() { [ $dry = 1 ] || "$@"; }
@@ -63,14 +72,15 @@ for f in "${files[@]}"; do
   backup=-
   if [ -e "$dst" ] || [ -L "$dst" ]; then
     if cmp -s "$src" "$dst"; then say "unchanged: $dst"; continue; fi
-    backup=$dst.bak.graphite-$stamp
+    backup=$dst.bak.graphite-$tag
     say "back up: $dst -> $backup"
     run cp -a "$dst" "$backup"
   fi
   say "write: $dst"
   run mkdir -p "$(dirname "$dst")"
   run install -m "$mode" "$src" "$dst"
-  entries+=("$(jq -n --arg t "$dst" --arg b "$backup" '{target:$t, backup:$b}')")
+  sha=-; [ $dry = 1 ] || sha=$(sha256sum "$dst" | cut -d' ' -f1)
+  entries+=("$(jq -n --arg t "$dst" --arg b "$backup" --arg h "$sha" '{target:$t, backup:$b, installed_sha256:$h}')")
 done
 
 # ~/.claude/settings.json: set the theme and the status line. Only these two keys change.
@@ -84,7 +94,7 @@ if [ -f "$settings" ] && [ "$(jq -c '[.theme, .statusLine]' "$settings")" = "$(j
   settings_done=0
 else
   if [ -f "$settings" ]; then
-    settings_backup=$settings.bak.graphite-$stamp
+    settings_backup=$settings.bak.graphite-$tag
     say "back up: $settings -> $settings_backup"
     run cp -a "$settings" "$settings_backup"
   fi
@@ -99,22 +109,34 @@ else
   settings_done=1
 fi
 
-prev_terminal=-
 if [ $set_term = 1 ]; then
-  prev_terminal=$(omarchy-default-terminal 2>/dev/null || echo -)
-  say "default terminal: $prev_terminal -> ghostty (omarchy-default-terminal ghostty)"
+  xt=$HOME/.config/xdg-terminals.list # the file that omarchy-default-terminal writes
+  backup=-
+  if [ -e "$xt" ] || [ -L "$xt" ]; then
+    backup=$xt.bak.graphite-$tag
+    say "back up: $xt -> $backup"
+    run cp -a "$xt" "$backup"
+  fi
+  say "default terminal: ghostty (omarchy-default-terminal ghostty writes $xt)"
   run omarchy-default-terminal ghostty
+  if [ $dry = 0 ]; then
+    if [ "$backup" != - ] && cmp -s "$backup" "$xt"; then
+      rm -f "$backup"; say "unchanged: $xt"
+    else
+      entries+=("$(jq -n --arg t "$xt" --arg b "$backup" --arg h "$(sha256sum "$xt" | cut -d' ' -f1)" '{target:$t, backup:$b, installed_sha256:$h}')")
+    fi
+  fi
 fi
 
-if [ $dry = 0 ] && [ -z "${entries[*]:-}" ] && [ "${settings_done:-0}" = 0 ] && [ "$prev_terminal" = - ]; then
+if [ $dry = 0 ] && [ -z "${entries[*]:-}" ] && [ "${settings_done:-0}" = 0 ]; then
   echo "nothing changed; no manifest written"
 elif [ $dry = 0 ]; then
-  jq -n --arg stamp "$stamp" --arg home "$HOME" --arg settings "$settings" --arg sb "$settings_backup" \
-    --argjson pt "$prev_theme" --argjson ps "$prev_status" --argjson sd "${settings_done:-0}" --arg term "$prev_terminal" \
+  ssha=-; [ "${settings_done:-0}" = 1 ] && ssha=$(sha256sum "$settings" | cut -d' ' -f1)
+  jq -n --arg ssha "$ssha" --arg stamp "$tag" --arg home "$HOME" --arg settings "$settings" --arg sb "$settings_backup" \
+    --argjson pt "$prev_theme" --argjson ps "$prev_status" --argjson sd "${settings_done:-0}" \
     --argjson files "$(printf '%s\n' "${entries[@]:-}" | jq -s 'map(select(. != null))')" \
     '{stamp:$stamp, home:$home, files:$files,
-      settings:{path:$settings, backup:$sb, changed:($sd == 1), prev_theme:$pt, prev_statusLine:$ps},
-      default_terminal_before:$term}' >"$manifest"
+      settings:{path:$settings, backup:$sb, changed:($sd == 1), installed_sha256:$ssha, prev_theme:$pt, prev_statusLine:$ps}}' >"$manifest"
   echo "manifest: $manifest"
 fi
 
