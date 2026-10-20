@@ -1,0 +1,58 @@
+#!/usr/bin/env bash
+# A stand-in for a Claude Code pane in the screenshots. It prints a staged screen with made-up data, then waits.
+# It is NOT Claude Code. herdr sees its name ("claude") and the state that render-base-shots.sh reports for it.
+# Env: DEMO_LOOK=before|after (after adds the Graphite status line, run with sample JSON), DEMO_SCENE=1..4.
+set -u
+here=$(cd "$(dirname "$0")/.." && pwd)
+look=${DEMO_LOOK:-after}
+scene=${DEMO_SCENE:-1}
+cols=$(tput cols 2>/dev/null || echo 100)
+bg=$'\e[48;2;38;38;40m'; fg=$'\e[38;2;229;229;231m'; dim=$'\e[38;2;152;152;157m'; blue=$'\e[38;2;10;132;255m'
+green=$'\e[38;2;50;215;75m'; off=$'\e[0m'; bold=$'\e[1m'
+[ "$look" = after ] && { bg=$'\e[48;2;36;36;38m'; green=$'\e[38;2;127;212;143m'; }
+line() { printf '%s\n' "$1"; }
+pad() { printf '%s%s %-*s%s\n' "$bg" "$fg" $((cols - 3)) "$1" "$off"; }
+
+case $scene in
+1) user="Add a dark mode switch to the settings page"
+   say=("I added the switch and it remembers the choice. Two files changed." "" "  ${green}✓${off} src/settings/ThemeSwitch.tsx  ${dim}new${off}" "  ${green}✓${off} src/theme.ts  ${dim}+14 −2${off}" "  ${green}✓${off} 12 tests passed" "" "Want the switch in the toolbar too?")
+   json='{"model":{"display_name":"Opus"},"context_window":{"used_percentage":31},"rate_limits":{"five_hour":{"used_percentage":42,"resets_at":%RESET%}}}' ;;
+2) user="Find out why the nightly build is slow"
+   say=("I am timing each step of the build now." "" "  ${blue}●${off} step 3 of 5: bundling" "  ${dim}Read 14 files, ran 6 commands${off}")
+   json='{"model":{"display_name":"Sonnet"},"context_window":{"used_percentage":58},"rate_limits":{"five_hour":{"used_percentage":42,"resets_at":%RESET%}}}' ;;
+3) user="Remove the old billing tables"
+   say=("This deletes data. I need your decision." "" "  Drop 3 tables in the staging database?" "" "  ${blue}1${off} Yes, drop them    ${blue}2${off} No, keep them")
+   json='{"model":{"display_name":"Opus"},"context_window":{"used_percentage":77},"rate_limits":{"five_hour":{"used_percentage":42,"resets_at":%RESET%}}}' ;;
+*) user="Update the zsh prompt"
+   say=("Done. The prompt shows the git branch now." "" "  ${green}✓${off} .zshrc  ${dim}+6 −1${off}")
+   json='{"model":{"display_name":"Haiku"},"context_window":{"used_percentage":12},"rate_limits":{"five_hour":{"used_percentage":42,"resets_at":%RESET%}}}' ;;
+esac
+
+draw() {
+  cols=$(tput cols 2>/dev/null || echo 100)
+  clear
+  printf '\e[?25l' # hide the cursor
+
+  line ""
+  pad ""
+  pad "> ${user}"
+  pad ""
+  line ""
+  for s in "${say[@]}"; do line "  $s"; done
+  line ""
+  printf '%s╭%s╮%s\n' "$dim" "$(printf '─%.0s' $(seq $((cols - 2))))" "$off"
+  printf '%s│%s %s>%s%*s%s│%s\n' "$dim" "$off" "$blue" "$off" $((cols - 4)) "" "$dim" "$off"
+  printf '%s╰%s╯%s\n' "$dim" "$(printf '─%.0s' $(seq $((cols - 2))))" "$off"
+  if [ "$look" = after ]; then
+    now=$(date +%s)
+    printf ' '
+    printf '%s' "${json//%RESET%/$((now + 8100))}" | "$here/../config/claude/statusline.sh"
+    printf '\n'
+  else
+    printf '  %s? for shortcuts%s\n' "$dim" "$off"
+  fi
+}
+trap draw WINCH
+draw
+# Redraw when herdr resizes the pane.
+while :; do sleep 3600 & wait $!; done
