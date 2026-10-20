@@ -3,7 +3,7 @@
 # Usage: scripts/test-statusline.sh
 set -u
 root=$(git rev-parse --show-toplevel)
-sl="$root/config/claude/statusline.sh"
+sl=${STATUSLINE:-$root/config/claude/statusline.sh} # STATUSLINE=path tests another copy
 export GRAPHITE_STATUSLINE_NOW=1000000
 fail=0
 
@@ -35,6 +35,20 @@ check "expired window" '{"model":{"display_name":"Opus"},"rate_limits":{"five_ho
 absent "no dollar costs" '{"model":{"display_name":"Opus"},"cost":{"total_cost_usd":12.5},"rate_limits":{"spend_limit":{"used_usd":3,"limit_usd":10,"used_percentage":30}}}' '\$|USD|[0-9]+\.[0-9]{2}'
 check "empty input" '' '^Claude$'
 check "invalid JSON" 'not json' '^Claude$'
+
+# Review fixes: an empty field must stay in its own place, and a wrong type hides only that field.
+absent "resets_at without used_percentage: no session bar, no 7800%" '{"model":{"display_name":"Opus"},"context_window":{"used_percentage":10},"rate_limits":{"five_hour":{"resets_at":1007800}}}' 'session|7800'
+check "resets_at without used_percentage: context stays" '{"model":{"display_name":"Opus"},"context_window":{"used_percentage":10},"rate_limits":{"five_hour":{"resets_at":1007800}}}' \
+  '^Opus  ·  context ━{10} 10%$'
+check "ISO string in resets_at: bars stay, no time" '{"model":{"display_name":"Opus"},"context_window":{"used_percentage":10},"rate_limits":{"five_hour":{"used_percentage":40,"resets_at":"2026-10-19T20:00:00Z"}}}' \
+  '^Opus  ·  context ━{10} 10%  ·  session limit ━{10} 40%$'
+check "string in used_percentage: that bar is hidden, the rest stays" '{"model":{"display_name":"Opus"},"context_window":{"used_percentage":"lots"},"rate_limits":{"five_hour":{"used_percentage":40,"resets_at":1007800}}}' \
+  '^Opus  ·  context ━{10} 0%  ·  session limit ━{10} 40% resets in 2h 10m$'
+check "rate_limits is a string: model and context stay" '{"model":{"display_name":"Opus"},"context_window":{"used_percentage":10},"rate_limits":"none"}' \
+  '^Opus  ·  context ━{10} 10%$'
+check "model is a number: name falls back to Claude" '{"model":{"display_name":5},"context_window":{"used_percentage":10}}' \
+  '^Claude  ·  context ━{10} 10%$'
+check "top-level array: Claude only or a safe line" '[]' '^Claude'
 
 # Colour check: 70 % and 90 % change the bar colour.
 c70=$(printf '%s' '{"model":{"display_name":"X"},"context_window":{"used_percentage":70}}' | "$sl" | grep -c $'38;2;255;204;102m')

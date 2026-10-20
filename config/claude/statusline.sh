@@ -7,14 +7,17 @@ set -u
 input=$(cat)
 
 # One jq call: model, context percent, session-limit percent, seconds until the session limit resets.
+# Each field is checked alone: a wrong type hides only that field. The separator is the control character 0x1f,
+# not a tab, because read joins empty fields that are split by white space (tab).
 now=${GRAPHITE_STATUSLINE_NOW:-$(date +%s)}
-IFS=$'\t' read -r model ctx lim reset < <(
+IFS=$'\x1f' read -r model ctx lim reset < <(
   printf '%s' "$input" | jq -r --argjson now "$now" '
-    [ (.model.display_name // "Claude"),
-      (.context_window.used_percentage // 0 | floor),
-      (.rate_limits.five_hour.used_percentage // "" | if . == "" then "" else floor end),
-      (if .rate_limits.five_hour.resets_at then ((.rate_limits.five_hour.resets_at - $now) | if . < 0 then 0 else . end) else "" end)
-    ] | map(tostring) | @tsv' 2>/dev/null
+    def pct: if type == "number" then floor else "" end;
+    [ (try .model.display_name catch null | if type == "string" and . != "" then . else "Claude" end),
+      (try .context_window.used_percentage catch null | pct | if . == "" then 0 else . end),
+      (try .rate_limits.five_hour.used_percentage catch null | pct),
+      (try .rate_limits.five_hour.resets_at catch null | if type == "number" then ([. - $now, 0] | max | floor) else "" end)
+    ] | map(tostring) | join("\u001f")' 2>/dev/null
 ) || true
 [ -n "${model:-}" ] || { printf 'Claude'; exit 0; }
 
